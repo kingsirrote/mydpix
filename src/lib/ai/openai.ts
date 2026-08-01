@@ -1,7 +1,14 @@
 import OpenAI from "openai";
 import type { AspectRatio } from "@/lib/ai/promptEngine";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let client: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!client) {
+    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return client;
+}
 
 const SIZE_MAP: Record<AspectRatio, "1024x1024" | "1024x1536" | "1536x1024"> = {
   "1:1": "1024x1024",
@@ -46,7 +53,9 @@ export async function generateImage({ prompt, aspectRatio }: GenerateImageInput)
         quality: "high",
         n: 1,
       };
-      const response = await openai.images.generate(params as unknown as Parameters<typeof openai.images.generate>[0]);
+      const response = await getOpenAI().images.generate(
+        params as unknown as Parameters<OpenAI["images"]["generate"]>[0]
+      );
 
       const b64 = response.data[0]?.b64_json;
       if (!b64) throw new Error("No image data returned from provider");

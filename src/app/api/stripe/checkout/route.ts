@@ -28,6 +28,13 @@ export async function POST(request: NextRequest) {
   const planKey: PlanKey = parsed.data.plan;
   const plan = PLANS[planKey];
 
+  if (!plan.priceId) {
+    return NextResponse.json(
+      { error: "Payments aren't configured yet — check back shortly." },
+      { status: 503 }
+    );
+  }
+
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   const service = createServiceClient();
 

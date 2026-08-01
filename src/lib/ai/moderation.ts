@@ -1,6 +1,13 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let client: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!client) {
+    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return client;
+}
 
 export interface ModerationResult {
   allowed: boolean;
@@ -12,7 +19,7 @@ export interface ModerationResult {
  * spending an image-generation call on it.
  */
 export async function moderatePrompt(prompt: string): Promise<ModerationResult> {
-  const result = await openai.moderations.create({
+  const result = await getOpenAI().moderations.create({
     model: "omni-moderation-latest",
     input: prompt,
   });

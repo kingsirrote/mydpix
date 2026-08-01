@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { generationRateLimit, checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { moderatePrompt } from "@/lib/ai/moderation";
 import { buildImagePrompt, suggestStyle, type MemeStyle, type AspectRatio } from "@/lib/ai/promptEngine";
 import { generateImageVariations } from "@/lib/ai/openai";
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   }
 
   const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-  const { success: withinBurstLimit } = await checkRateLimit(generationRateLimit, `${user.id}:${ip}`);
+  const { success: withinBurstLimit } = await checkRateLimit("generate", `${user.id}:${ip}`);
   if (!withinBurstLimit) {
     return NextResponse.json(
       { error: "You're generating a bit too fast. Take a short breather and try again." },

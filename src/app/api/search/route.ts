@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { searchRateLimit, checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -15,7 +15,7 @@ const querySchema = z.object({
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-  const { success } = await checkRateLimit(searchRateLimit, ip);
+  const { success } = await checkRateLimit("search", ip);
   if (!success) {
     return NextResponse.json({ error: "Too many searches, slow down a little." }, { status: 429 });
   }
