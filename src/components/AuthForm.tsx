@@ -16,9 +16,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
 
-  const supabase = createClient();
-
   async function handleOAuth(provider: "google" | "github") {
+    const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${location.origin}/api/auth/callback?redirectTo=${redirectTo}` },
@@ -28,6 +27,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    const supabase = createClient();
 
     if (mode === "signup") {
       const { error } = await supabase.auth.signUp({

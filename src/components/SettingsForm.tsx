@@ -17,11 +17,11 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
   const [newPassword, setNewPassword] = useState("");
   const [portalLoading, setPortalLoading] = useState(false);
 
-  const supabase = createClient();
   const isPremium = profile?.role === "premium" || profile?.role === "admin";
 
   async function handleSaveProfile() {
     setSaving(true);
+    const supabase = createClient();
     const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("id", profile!.id);
     if (error) toast.error("Could not save changes.");
     else toast.success("Profile updated.");
@@ -33,6 +33,7 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
       toast.error("Password must be at least 8 characters.");
       return;
     }
+    const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) toast.error(error.message);
     else {
