@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    restart: unless-stopped
+
+# Note: Supabase (Postgres, Auth, Storage) is used as a managed service in
+# production. For fully local development, run the Supabase CLI alongside
+# this compose file:
+#   supabase start
+# which spins up Postgres, GoTrue, Storage, and Studio on their own ports
+# and is not duplicated here to avoid port collisions.
