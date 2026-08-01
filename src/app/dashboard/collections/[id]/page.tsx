@@ -4,6 +4,8 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { MemeGrid } from "@/components/MemeGrid";
 
+export const dynamic = "force-dynamic";
+
 export default async function CollectionDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const {

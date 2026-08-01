@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { CollectionsManager } from "@/components/CollectionsManager";
 
 export const metadata = { title: "Your collections" };
+export const dynamic = "force-dynamic";
 
 export default async function CollectionsPage() {
   const supabase = createClient();

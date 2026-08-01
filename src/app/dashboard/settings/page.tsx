@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { SettingsForm } from "@/components/SettingsForm";
 
 export const metadata = { title: "Settings" };
+export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const supabase = createClient();

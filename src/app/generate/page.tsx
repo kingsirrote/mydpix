@@ -4,6 +4,7 @@ import { GeneratorForm } from "@/components/GeneratorForm";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Generate a meme" };
+export const dynamic = "force-dynamic";
 
 export default async function GeneratePage() {
   const supabase = createClient();

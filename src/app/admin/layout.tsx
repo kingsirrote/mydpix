@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 const NAV = [
   { label: "Overview", href: "/admin" },
   { label: "Users", href: "/admin/users" },
