@@ -40,7 +40,7 @@ export default async function MemeDetailPage({ params }: { params: { id: string 
           </div>
 
           <div className="mt-6">
-            <DetailActions memeId={meme.id} />
+            <DetailActions memeId={meme.id} imageUrl={meme.image_url} title={meme.title} />
           </div>
         </div>
       </main>

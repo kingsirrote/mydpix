@@ -4,8 +4,9 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { Heart, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShareButton, StickerButton } from "@/components/ShareButtons";
 
-export function DetailActions({ memeId }: { memeId: string }) {
+export function DetailActions({ memeId, imageUrl, title }: { memeId: string; imageUrl: string; title: string }) {
   const [liked, setLiked] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -52,6 +53,8 @@ export function DetailActions({ memeId }: { memeId: string }) {
       <Button variant="secondary" onClick={() => download("jpg")}>
         <Download className="h-4 w-4" /> JPG
       </Button>
+      <ShareButton imageUrl={imageUrl} title={title} size="md" />
+      <StickerButton memeId={memeId} size="md" />
     </div>
   );
 }

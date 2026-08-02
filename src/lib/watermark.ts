@@ -91,3 +91,21 @@ export async function toFormat(imageBuffer: Buffer, format: "png" | "jpg"): Prom
   const image = sharp(imageBuffer);
   return format === "jpg" ? image.jpeg({ quality: 92 }).toBuffer() : image.png().toBuffer();
 }
+
+/**
+ * Converts an image into the sticker format used by WhatsApp, Telegram, and
+ * most third-party sticker-maker apps: 512x512 WebP, contained (not cropped)
+ * on a transparent canvas. Note: this produces a correctly-formatted sticker
+ * file for the user to add via a sticker-pack app — there is no way for a
+ * website to push a sticker directly into WhatsApp's official sticker tray,
+ * since that requires a native app using WhatsApp's dedicated Android/iOS API.
+ */
+export async function toStickerFormat(imageBuffer: Buffer): Promise<Buffer> {
+  return sharp(imageBuffer)
+    .resize(512, 512, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .webp({ quality: 85 })
+    .toBuffer();
+}

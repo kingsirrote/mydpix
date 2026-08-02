@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { Sparkles, Download, RefreshCw, Lock, BookmarkPlus } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ShareButton, StickerButton } from "@/components/ShareButtons";
 import { cn } from "@/lib/utils";
 
 const STYLES = [
@@ -195,17 +196,19 @@ export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
               <div key={i} className="aspect-square animate-pulse rounded-2xl bg-base-800" />
             ))}
           {results.map((meme) => (
-            <div key={meme.id} className="group relative overflow-hidden rounded-2xl border border-base-700">
+            <div key={meme.id} className="overflow-hidden rounded-2xl border border-base-700">
               <div className="relative aspect-square w-full">
                 <Image src={meme.image_url} alt="Generated meme" fill className="object-cover" />
               </div>
-              <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 bg-gradient-to-t from-black/80 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="flex flex-wrap justify-center gap-1.5 border-t border-base-700 bg-base-900 p-2">
                 <Button size="sm" variant="secondary" onClick={() => handleDownload(meme.id, "png")}>
                   <Download className="h-3 w-3" /> PNG
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => handleDownload(meme.id, "jpg")}>
                   <Download className="h-3 w-3" /> JPG
                 </Button>
+                <ShareButton imageUrl={meme.image_url} title="Check out this meme from MyDpix AI" />
+                <StickerButton memeId={meme.id} />
               </div>
             </div>
           ))}
