@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Sparkles, Download, RefreshCw, Lock } from "lucide-react";
+import { Sparkles, Download, RefreshCw, Lock, BookmarkPlus } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,12 +33,40 @@ interface GeneratedMeme {
 }
 
 export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
-  const [prompt, setPrompt] = useState("");
-  const [style, setStyle] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [prompt, setPrompt] = useState(searchParams.get("prompt") ?? "");
+  const [style, setStyle] = useState<string | null>(searchParams.get("style"));
   const [aspectRatio, setAspectRatio] = useState<(typeof RATIOS)[number]["value"]>("1:1");
   const [removeWatermark, setRemoveWatermark] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<GeneratedMeme[]>([]);
+  const [savingPrompt, setSavingPrompt] = useState(false);
+
+  // Re-sync if the search params change after mount (e.g. clicking another
+  // "Use this prompt" link while already on /generate).
+  useEffect(() => {
+    const urlPrompt = searchParams.get("prompt");
+    if (urlPrompt) setPrompt(urlPrompt);
+    const urlStyle = searchParams.get("style");
+    if (urlStyle) setStyle(urlStyle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  async function handleSavePrompt() {
+    setSavingPrompt(true);
+    const res = await fetch("/api/saved-prompts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, style: style ?? undefined, aspectRatio }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Could not save prompt.");
+    } else {
+      toast.success("Prompt saved — find it on your dashboard.");
+    }
+    setSavingPrompt(false);
+  }
 
   async function handleGenerate() {
     if (prompt.trim().length < 3) {
@@ -148,10 +177,15 @@ export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
           </label>
         </div>
 
-        <Button className="mt-5 w-full sm:w-auto" onClick={handleGenerate} disabled={loading}>
-          {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {loading ? "Generating…" : "Generate memes"}
-        </Button>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Button onClick={handleGenerate} disabled={loading}>
+            {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {loading ? "Generating…" : "Generate memes"}
+          </Button>
+          <Button variant="outline" onClick={handleSavePrompt} disabled={savingPrompt || prompt.trim().length < 3}>
+            <BookmarkPlus className="h-4 w-4" /> {savingPrompt ? "Saving…" : "Save prompt"}
+          </Button>
+        </div>
       </div>
 
       {(loading || results.length > 0) && (

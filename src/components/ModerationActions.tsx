@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Check, X, Star } from "lucide-react";
+import { Check, X, Star, Trash2 } from "lucide-react";
 
 export function ModerationActions({ memeId, isFeatured }: { memeId: string; isFeatured: boolean }) {
   const [busy, setBusy] = useState(false);
@@ -36,6 +36,18 @@ export function ModerationActions({ memeId, isFeatured }: { memeId: string; isFe
     setBusy(false);
   }
 
+  async function handleDelete() {
+    if (!confirm("Permanently delete this meme? This can't be undone.")) return;
+    setBusy(true);
+    const res = await fetch(`/api/admin/memes/${memeId}`, { method: "DELETE" });
+    if (!res.ok) toast.error("Delete failed.");
+    else {
+      toast.success("Meme deleted.");
+      router.refresh();
+    }
+    setBusy(false);
+  }
+
   return (
     <div className="mt-2 flex gap-1.5">
       <button
@@ -61,6 +73,14 @@ export function ModerationActions({ memeId, isFeatured }: { memeId: string; isFe
         title="Feature"
       >
         <Star className="mx-auto h-3.5 w-3.5" />
+      </button>
+      <button
+        disabled={busy}
+        onClick={handleDelete}
+        className="flex-1 rounded-lg bg-base-800 p-1.5 text-ink-500 hover:bg-red-500/20 hover:text-red-400"
+        title="Delete"
+      >
+        <Trash2 className="mx-auto h-3.5 w-3.5" />
       </button>
     </div>
   );

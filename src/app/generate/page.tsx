@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { GeneratorForm } from "@/components/GeneratorForm";
@@ -27,7 +28,9 @@ export default async function GeneratePage() {
           Describe any situation — the more specific, the funnier. We&apos;ll suggest a style automatically, or you can pick one.
         </p>
         <div className="mt-8">
-          <GeneratorForm isPremium={!!isPremium} />
+          <Suspense fallback={null}>
+            <GeneratorForm isPremium={!!isPremium} />
+          </Suspense>
         </div>
       </main>
       <Footer />

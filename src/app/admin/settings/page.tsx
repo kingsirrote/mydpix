@@ -1,8 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
 import { SiteSettingsForm } from "@/components/SiteSettingsForm";
+import { CategoriesManager } from "@/components/CategoriesManager";
 
 export const metadata = { title: "Admin — Settings" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
   const service = createServiceClient();
@@ -21,13 +22,8 @@ export default async function AdminSettingsPage() {
 
       <div>
         <h2 className="font-display text-xl font-semibold">Categories</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {(categories ?? []).map((c) => (
-            <Card key={c.id} className="p-4">
-              <p className="font-medium">{c.name}</p>
-              <p className="text-xs text-ink-500">{c.description}</p>
-            </Card>
-          ))}
+        <div className="mt-4">
+          <CategoriesManager categories={categories ?? []} />
         </div>
       </div>
     </div>

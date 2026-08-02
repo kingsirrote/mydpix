@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -13,16 +14,23 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export function SettingsForm({ profile, email }: { profile: Profile | null; email: string }) {
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? "");
   const [saving, setSaving] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [portalLoading, setPortalLoading] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
 
   const isPremium = profile?.role === "premium" || profile?.role === "admin";
 
   async function handleSaveProfile() {
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("id", profile!.id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ display_name: displayName, avatar_url: avatarUrl || null })
+      .eq("id", profile!.id);
     if (error) toast.error("Could not save changes.");
     else toast.success("Profile updated.");
     setSaving(false);
@@ -54,6 +62,22 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
     window.location.href = data.url;
   }
 
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    const res = await fetch("/api/account", { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Could not delete account.");
+      setDeleting(false);
+      return;
+    }
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    toast.success("Account deleted.");
+    router.push("/");
+    router.refresh();
+  }
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -66,6 +90,25 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
           <div>
             <label className="mb-1 block text-xs text-ink-500">Display name</label>
             <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-ink-500">Avatar URL</label>
+            <div className="flex items-center gap-3">
+              {avatarUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- arbitrary user-provided URL, can't whitelist every domain
+                <img
+                  src={avatarUrl}
+                  alt="Avatar preview"
+                  className="h-10 w-10 shrink-0 rounded-full border border-base-700 object-cover"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
+              )}
+              <Input
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+                placeholder="https://…"
+              />
+            </div>
           </div>
           <Button onClick={handleSaveProfile} disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
@@ -106,6 +149,27 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
               <Button>Upgrade</Button>
             </a>
           )}
+        </div>
+      </Card>
+
+      <Card className="border-red-900/50 p-6">
+        <h2 className="font-display text-lg font-semibold text-red-400">Danger zone</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Permanently deletes your account, memes, collections, and subscription. This can&apos;t be undone.
+        </p>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <Input
+            placeholder='Type "DELETE" to confirm'
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+          />
+          <Button
+            variant="danger"
+            disabled={deleteConfirmText !== "DELETE" || deleting}
+            onClick={handleDeleteAccount}
+          >
+            {deleting ? "Deleting…" : "Delete my account"}
+          </Button>
         </div>
       </Card>
     </div>

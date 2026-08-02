@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { MemeGrid } from "@/components/MemeGrid";
+import { SavedPromptsList } from "@/components/SavedPromptsList";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,21 @@ export default async function DashboardPage() {
     .select("id, name")
     .eq("user_id", user.id)
     .limit(6);
+
+  const { data: likedRows } = await supabase
+    .from("likes")
+    .select("memes(id, title, image_url, thumbnail_url, aspect_ratio, view_count, like_count, download_count)")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(12);
+  const likedMemes = (likedRows ?? []).map((row: any) => row.memes).filter(Boolean);
+
+  const { data: savedPrompts } = await supabase
+    .from("saved_prompts")
+    .select("id, prompt, style, aspect_ratio, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   const isPremium = profile?.role === "premium" || profile?.role === "admin";
   const dailyLimit = isPremium ? 100 : 6;
@@ -82,6 +98,16 @@ export default async function DashboardPage() {
             </div>
           </section>
         )}
+
+        <section className="mt-10">
+          <h2 className="mb-4 font-display text-xl font-semibold">Memes you&apos;ve liked</h2>
+          <MemeGrid memes={likedMemes} emptyLabel="Like memes in the library to see them here." />
+        </section>
+
+        <section className="mt-10">
+          <h2 className="mb-4 font-display text-xl font-semibold">Saved prompts</h2>
+          <SavedPromptsList initialPrompts={savedPrompts ?? []} />
+        </section>
       </main>
       <Footer />
     </div>

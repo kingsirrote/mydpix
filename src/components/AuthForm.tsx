@@ -3,25 +3,41 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { Github, Mail } from "lucide-react";
+import { Github, Chrome, Apple, Twitter } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+type OAuthProvider = "google" | "apple" | "twitter" | "github";
+
+const OAUTH_PROVIDERS: { provider: OAuthProvider; label: string; icon: typeof Github }[] = [
+  { provider: "google", label: "Continue with Google", icon: Chrome },
+  { provider: "apple", label: "Continue with Apple", icon: Apple },
+  { provider: "twitter", label: "Continue with X", icon: Twitter },
+  { provider: "github", label: "Continue with GitHub", icon: Github },
+];
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
 
-  async function handleOAuth(provider: "google" | "github") {
+  async function handleOAuth(provider: OAuthProvider) {
+    setOauthLoading(provider);
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${location.origin}/api/auth/callback?redirectTo=${redirectTo}` },
     });
+    if (error) {
+      toast.error(error.message);
+      setOauthLoading(null);
+    }
+    // On success, the browser navigates away to the provider — no need to reset loading state.
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -55,12 +71,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </h1>
 
       <div className="mt-6 space-y-2">
-        <Button variant="secondary" className="w-full" onClick={() => handleOAuth("google")}>
-          <Mail className="h-4 w-4" /> Continue with Google
-        </Button>
-        <Button variant="secondary" className="w-full" onClick={() => handleOAuth("github")}>
-          <Github className="h-4 w-4" /> Continue with GitHub
-        </Button>
+        {OAUTH_PROVIDERS.map(({ provider, label, icon: Icon }) => (
+          <Button
+            key={provider}
+            variant="secondary"
+            className="w-full"
+            onClick={() => handleOAuth(provider)}
+            disabled={oauthLoading !== null}
+          >
+            <Icon className="h-4 w-4" /> {oauthLoading === provider ? "Redirecting…" : label}
+          </Button>
+        ))}
       </div>
 
       <div className="my-5 flex items-center gap-3 text-xs text-ink-500">
