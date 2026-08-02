@@ -60,8 +60,15 @@ export async function POST(request: NextRequest) {
   const { prompt, aspectRatio, variations, removeWatermark } = parsed.data;
   const style: MemeStyle = parsed.data.style ?? suggestStyle(prompt);
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const service = createServiceClient();
+  const { data: profile, error: profileError } = await service
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
   if (!profile) {
+    console.error("Profile lookup failed for authenticated user", user.id, profileError);
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
   }
 
@@ -112,7 +119,6 @@ export async function POST(request: NextRequest) {
       )
     );
 
-    const service = createServiceClient();
     const insertedMemes = [];
 
     for (const result of results) {
