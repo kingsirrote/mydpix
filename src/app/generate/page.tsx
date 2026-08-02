@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { GenerateTabs } from "@/components/GenerateTabs";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Generate a meme" };
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export default async function GeneratePage() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    ? await createServiceClient().from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
 
   const isPremium = profile?.role === "premium" || profile?.role === "admin";

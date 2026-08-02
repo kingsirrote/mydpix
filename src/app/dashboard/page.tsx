@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { MemeGrid } from "@/components/MemeGrid";
 import { SavedPromptsList } from "@/components/SavedPromptsList";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/dashboard");
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data: profile } = await createServiceClient().from("profiles").select("*").eq("id", user.id).single();
   const { data: recentMemes } = await supabase
     .from("memes")
     .select("id, title, image_url, thumbnail_url, aspect_ratio, view_count, like_count, download_count")

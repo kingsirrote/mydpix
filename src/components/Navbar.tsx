@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/UserMenu";
 
@@ -11,7 +11,8 @@ export async function Navbar() {
 
   let profile: { display_name: string | null; username: string; role: string } | null = null;
   if (user) {
-    const { data } = await supabase
+    const service = createServiceClient();
+    const { data } = await service
       .from("profiles")
       .select("display_name, username, role")
       .eq("id", user.id)
