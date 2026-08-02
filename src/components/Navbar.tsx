@@ -1,12 +1,23 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/UserMenu";
 
 export async function Navbar() {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  let profile: { display_name: string | null; username: string; role: string } | null = null;
+  if (user) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("display_name, username, role")
+      .eq("id", user.id)
+      .single();
+    profile = data;
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-base-800/80 bg-base-950/80 backdrop-blur-md">
@@ -24,9 +35,10 @@ export async function Navbar() {
 
         <div className="flex items-center gap-3">
           {user ? (
-            <Link href="/dashboard">
-              <Button size="sm" variant="secondary">Dashboard</Button>
-            </Link>
+            <UserMenu
+              displayName={profile?.display_name ?? profile?.username ?? "Account"}
+              isAdmin={profile?.role === "admin"}
+            />
           ) : (
             <>
               <Link href="/login">
