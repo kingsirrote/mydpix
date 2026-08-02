@@ -33,6 +33,21 @@ const FREE_DAILY_LIMIT = 6;
 const PREMIUM_DAILY_LIMIT = 100;
 
 export async function POST(request: NextRequest) {
+  try {
+    return await handleGenerate(request);
+  } catch (error) {
+    // Last-resort safety net: guarantees a clean JSON error response instead of
+    // Next.js's raw platform error page, which the client can't parse as JSON
+    // (surfacing as a generic "Network error" instead of anything actionable).
+    console.error("Unhandled error in /api/generate:", error);
+    return NextResponse.json(
+      { error: "Something went wrong generating your meme. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleGenerate(request: NextRequest) {
   const supabase = createClient();
   const {
     data: { user },
@@ -92,7 +107,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const moderation = await moderatePrompt(prompt);
+  let moderation;
+  try {
+    moderation = await moderatePrompt(prompt);
+  } catch (error) {
+    console.error("Moderation call failed:", error);
+    return NextResponse.json(
+      {
+        error:
+          "We couldn't reach the AI provider just now. This is often caused by a billing/quota issue on the OpenAI account — check platform.openai.com/usage.",
+      },
+      { status: 502 }
+    );
+  }
+
   if (!moderation.allowed) {
     await logGeneration(user.id, prompt, null, style, aspectRatio, variations, "moderated");
     return NextResponse.json(
