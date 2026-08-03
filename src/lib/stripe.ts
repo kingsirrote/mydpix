@@ -23,30 +23,34 @@ export const stripe = new Proxy({} as Stripe, {
   },
 });
 
-export const PLANS = {
-  premium_monthly: {
-    priceId: process.env.STRIPE_PRICE_PREMIUM_MONTHLY,
-    name: "Premium",
-    interval: "month",
-    dailyGenerationLimit: 100,
-    removesWatermark: true,
-    priorityQueue: true,
+/**
+ * Subscription plans, priced in Nigerian Naira. Each price ID is a recurring
+ * monthly Stripe Price — create these in the Stripe dashboard (or API) and
+ * set the corresponding env var. Coin allotments and feature flags live in
+ * src/lib/coins.ts (TIERS) since those also drive in-app logic, not just
+ * checkout — this map only needs the billing-specific fields.
+ */
+export const SUBSCRIPTION_PLANS = {
+  tier1: {
+    priceId: process.env.STRIPE_PRICE_TIER1,
+    tier: "tier1" as const,
   },
-  premium_yearly: {
-    priceId: process.env.STRIPE_PRICE_PREMIUM_YEARLY,
-    name: "Premium (Yearly)",
-    interval: "year",
-    dailyGenerationLimit: 100,
-    removesWatermark: true,
-    priorityQueue: true,
+  tier2: {
+    priceId: process.env.STRIPE_PRICE_TIER2,
+    tier: "tier2" as const,
+  },
+  tier3: {
+    priceId: process.env.STRIPE_PRICE_TIER3,
+    tier: "tier3" as const,
   },
 } as const;
 
-export type PlanKey = keyof typeof PLANS;
+export type SubscriptionPlanKey = keyof typeof SUBSCRIPTION_PLANS;
 
-export const FREE_PLAN = {
-  name: "Free",
-  dailyGenerationLimit: 6,
-  removesWatermark: false,
-  priorityQueue: false,
-};
+/**
+ * One-time coin top-up purchase — a single Stripe Price in "one-off payment"
+ * mode, not a subscription. The coin amount granted is read from
+ * site_settings.topup_coins_amount (admin-configurable) rather than hardcoded
+ * here, so the price and the coin amount can be tuned independently.
+ */
+export const TOPUP_PRICE_ID = process.env.STRIPE_PRICE_TOPUP;

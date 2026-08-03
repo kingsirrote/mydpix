@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Upload, Lock, X } from "lucide-react";
+import { Upload, Lock, X, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShareButton, StickerButton } from "@/components/ShareButtons";
@@ -15,13 +15,20 @@ interface UploadedMeme {
   title: string;
 }
 
-export function UploadForm({ isPremium }: { isPremium: boolean }) {
+export function UploadForm({
+  canRemoveWatermark,
+  coinBalance,
+}: {
+  canRemoveWatermark: boolean;
+  coinBalance: number | null;
+}) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [removeWatermark, setRemoveWatermark] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState<UploadedMeme | null>(null);
+  const [coins, setCoins] = useState(coinBalance);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelect(selected: File | null) {
@@ -55,6 +62,7 @@ export function UploadForm({ isPremium }: { isPremium: boolean }) {
         return;
       }
       setUploaded(data.meme);
+      if (typeof data.coinsRemaining === "number") setCoins(data.coinsRemaining);
       toast.success("Uploaded! Find it in your dashboard too.");
     } catch {
       toast.error("Network error — please try again.");
@@ -66,6 +74,12 @@ export function UploadForm({ isPremium }: { isPremium: boolean }) {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-base-700 bg-base-900 p-4 sm:p-6">
+        {coins !== null && (
+          <div className="mb-4 flex items-center gap-1.5 text-sm text-signal">
+            <Coins className="h-4 w-4" /> {coins} coin{coins === 1 ? "" : "s"} available
+          </div>
+        )}
+
         {!previewUrl ? (
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-base-700 py-12 text-ink-500 hover:border-signal hover:text-signal">
             <Upload className="h-6 w-6" />
@@ -102,12 +116,12 @@ export function UploadForm({ isPremium }: { isPremium: boolean }) {
             <input
               type="checkbox"
               checked={removeWatermark}
-              disabled={!isPremium}
+              disabled={!canRemoveWatermark}
               onChange={(e) => setRemoveWatermark(e.target.checked)}
               className="h-4 w-4 rounded border-base-700 bg-base-900 accent-signal"
             />
             Remove watermark
-            {!isPremium && <Lock className="h-3 w-3 text-ink-500" />}
+            {!canRemoveWatermark && <Lock className="h-3 w-3 text-ink-500" />}
           </label>
         </div>
 

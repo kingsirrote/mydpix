@@ -7,6 +7,9 @@ import { SavedPromptsList } from "@/components/SavedPromptsList";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BuyCoinsButton } from "@/components/BuyCoinsButton";
+import { TIERS, isPaidTier, FREE_DAILY_GENERATION_LIMIT } from "@/lib/coins";
+import type { SubscriptionTier } from "@/types/database";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -47,8 +50,9 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(20);
 
-  const isPremium = profile?.role === "premium" || profile?.role === "admin";
-  const dailyLimit = isPremium ? 100 : 6;
+  const tier = (profile?.subscription_tier ?? "free") as SubscriptionTier;
+  const paid = isPaidTier(tier);
+  const tierConfig = TIERS[tier];
 
   return (
     <div className="min-h-screen">
@@ -58,16 +62,19 @@ export default async function DashboardPage() {
           <div>
             <h1 className="font-display text-3xl font-bold">Hey, {profile?.display_name ?? profile?.username}</h1>
             <div className="mt-2 flex items-center gap-2">
-              <Badge>{isPremium ? "Premium" : "Free plan"}</Badge>
+              <Badge>{tierConfig.label}</Badge>
               <span className="text-xs text-ink-500">
-                {profile?.generation_count_today ?? 0}/{dailyLimit} generations today
+                {paid
+                  ? `${profile?.coin_balance ?? 0} coins available`
+                  : `${profile?.generation_count_today ?? 0}/${FREE_DAILY_GENERATION_LIMIT} generations today`}
               </span>
             </div>
           </div>
           <div className="flex gap-2">
-            {!isPremium && (
-              <Link href="/pricing"><Button variant="outline">Upgrade to Premium</Button></Link>
+            {!paid && (
+              <Link href="/pricing"><Button variant="outline">Upgrade</Button></Link>
             )}
+            {paid && tierConfig.canBuyTopUp && <BuyCoinsButton />}
             <Link href="/generate"><Button>New meme</Button></Link>
           </div>
         </div>

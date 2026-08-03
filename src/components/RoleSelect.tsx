@@ -61,7 +61,7 @@ export function RoleSelect({
       )}
     >
       <option value="user">user</option>
-      <option value="premium">premium</option>
+      <option value="premium">premium (legacy, no billing effect)</option>
       <option value="admin">admin</option>
     </select>
   );

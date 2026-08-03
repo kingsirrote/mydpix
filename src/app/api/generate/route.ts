@@ -7,6 +7,8 @@ import { moderatePrompt } from "@/lib/ai/moderation";
 import { buildImagePrompt, suggestStyle, type MemeStyle, type AspectRatio } from "@/lib/ai/promptEngine";
 import { generateImageVariations } from "@/lib/ai/openai";
 import { applyWatermark, generateThumbnail } from "@/lib/watermark";
+import { TIERS, FREE_DAILY_GENERATION_LIMIT, getCoinCosts, costForAspectRatio, isPaidTier } from "@/lib/coins";
+import type { SubscriptionTier } from "@/types/database";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,9 +30,6 @@ const requestSchema = z.object({
   variations: z.number().int().min(1).max(4).default(4),
   removeWatermark: z.boolean().optional().default(false),
 });
-
-const FREE_DAILY_LIMIT = 6;
-const PREMIUM_DAILY_LIMIT = 100;
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,24 +86,46 @@ async function handleGenerate(request: NextRequest) {
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
   }
 
-  const isPremium = profile.role === "premium" || profile.role === "admin";
-  const dailyLimit = isPremium ? PREMIUM_DAILY_LIMIT : FREE_DAILY_LIMIT;
+  const tier = profile.subscription_tier as SubscriptionTier;
+  const tierConfig = TIERS[tier];
+  const paid = isPaidTier(tier);
+  const costs = await getCoinCosts();
+  const costPerImage = costForAspectRatio(aspectRatio, costs);
 
-  const resetAt = new Date(profile.generation_count_reset_at);
-  const now = new Date();
-  const needsReset = now.getUTCDate() !== resetAt.getUTCDate() || now.getTime() - resetAt.getTime() > 24 * 60 * 60 * 1000;
-  const currentCount = needsReset ? 0 : profile.generation_count_today;
+  // Determine how many of the requested variations can actually be afforded /
+  // are within today's free quota, and produce a clear, tier-appropriate error
+  // when the answer is zero.
+  let remaining: number;
+  let now = new Date();
 
-  if (currentCount >= dailyLimit) {
-    return NextResponse.json(
-      {
-        error: isPremium
-          ? "You've hit today's generation limit. It resets tomorrow."
-          : "You've used today's free generations. Upgrade to Premium for a much higher daily limit.",
-        limitReached: true,
-      },
-      { status: 429 }
-    );
+  if (paid) {
+    remaining = Math.min(variations, Math.floor(profile.coin_balance / costPerImage));
+    if (remaining <= 0) {
+      return NextResponse.json(
+        {
+          error: tierConfig.canBuyTopUp
+            ? `You're out of coins (this style costs ${costPerImage} coin${costPerImage > 1 ? "s" : ""} per image). Buy a top-up to keep generating, or wait for your monthly refresh.`
+            : "You're out of coins for this month. They'll refresh on your next billing date.",
+          coinsExhausted: true,
+        },
+        { status: 429 }
+      );
+    }
+  } else {
+    const resetAt = new Date(profile.generation_count_reset_at);
+    const needsReset =
+      now.getUTCDate() !== resetAt.getUTCDate() || now.getTime() - resetAt.getTime() > 24 * 60 * 60 * 1000;
+    const currentCount = needsReset ? 0 : profile.generation_count_today;
+    remaining = Math.min(variations, FREE_DAILY_GENERATION_LIMIT - currentCount);
+    if (remaining <= 0) {
+      return NextResponse.json(
+        {
+          error: "You've used today's free generations. Upgrade to a paid plan for coin-based generation.",
+          limitReached: true,
+        },
+        { status: 429 }
+      );
+    }
   }
 
   let moderation;
@@ -130,8 +151,7 @@ async function handleGenerate(request: NextRequest) {
   }
 
   const startedAt = Date.now();
-  const remaining = Math.min(variations, dailyLimit - currentCount);
-  const skipWatermark = removeWatermark && isPremium;
+  const skipWatermark = removeWatermark && tierConfig.removesWatermark;
 
   try {
     const results = await Promise.all(
@@ -192,14 +212,31 @@ async function handleGenerate(request: NextRequest) {
       insertedMemes.push(memeRow);
     }
 
-    await service
-      .from("profiles")
-      .update({
-        generation_count_today: needsReset ? insertedMemes.length : currentCount + insertedMemes.length,
-        generation_count_reset_at: needsReset ? now.toISOString() : profile.generation_count_reset_at,
-        monthly_generation_count: profile.monthly_generation_count + insertedMemes.length,
-      })
-      .eq("id", user.id);
+    let coinsRemaining: number | null = null;
+
+    if (paid) {
+      const totalCost = costPerImage * insertedMemes.length;
+      const { data: spendResult } = await service.rpc("spend_coins", {
+        p_user_id: user.id,
+        p_amount: totalCost,
+        p_reason: "generation",
+        p_meme_id: insertedMemes[0]?.id ?? null,
+      });
+      coinsRemaining = spendResult?.[0]?.new_balance ?? profile.coin_balance - totalCost;
+    } else {
+      const resetAt = new Date(profile.generation_count_reset_at);
+      const needsReset =
+        now.getUTCDate() !== resetAt.getUTCDate() || now.getTime() - resetAt.getTime() > 24 * 60 * 60 * 1000;
+      const currentCount = needsReset ? 0 : profile.generation_count_today;
+      await service
+        .from("profiles")
+        .update({
+          generation_count_today: needsReset ? insertedMemes.length : currentCount + insertedMemes.length,
+          generation_count_reset_at: needsReset ? now.toISOString() : profile.generation_count_reset_at,
+          monthly_generation_count: profile.monthly_generation_count + insertedMemes.length,
+        })
+        .eq("id", user.id);
+    }
 
     await logGeneration(
       user.id,
@@ -212,7 +249,12 @@ async function handleGenerate(request: NextRequest) {
       Date.now() - startedAt
     );
 
-    return NextResponse.json({ memes: insertedMemes, style, remainingToday: dailyLimit - currentCount - insertedMemes.length });
+    return NextResponse.json({
+      memes: insertedMemes,
+      style,
+      coinsRemaining,
+      coinCostPerImage: paid ? costPerImage : null,
+    });
   } catch (error) {
     console.error("Meme generation failed", error);
     await logGeneration(user.id, prompt, null, style, aspectRatio, variations, "failed", Date.now() - startedAt, String(error));

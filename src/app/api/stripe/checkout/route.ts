@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { stripe, PLANS, type PlanKey } from "@/lib/stripe";
+import { stripe, SUBSCRIPTION_PLANS, type SubscriptionPlanKey } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
 const schema = z.object({
-  plan: z.enum(["premium_monthly", "premium_yearly"]),
+  plan: z.enum(["tier1", "tier2", "tier3"]),
 });
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Sign in to upgrade to Premium." }, { status: 401 });
+    return NextResponse.json({ error: "Sign in to upgrade." }, { status: 401 });
   }
 
   const body = await request.json().catch(() => null);
@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid plan selected." }, { status: 400 });
   }
 
-  const planKey: PlanKey = parsed.data.plan;
-  const plan = PLANS[planKey];
+  const planKey: SubscriptionPlanKey = parsed.data.plan;
+  const plan = SUBSCRIPTION_PLANS[planKey];
 
   if (!plan.priceId) {
     return NextResponse.json(
@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   const service = createServiceClient();
+  const { data: profile } = await service.from("profiles").select("*").eq("id", user.id).single();
 
   let customerId = profile?.stripe_customer_id ?? undefined;
   if (!customerId) {

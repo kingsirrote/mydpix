@@ -11,7 +11,7 @@ interface PricingCardProps {
   price: string;
   period: string;
   features: string[];
-  plan?: "premium_monthly" | "premium_yearly";
+  plan?: "tier1" | "tier2" | "tier3";
   highlight?: boolean;
 }
 

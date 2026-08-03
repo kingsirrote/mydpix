@@ -6,7 +6,13 @@ import { GeneratorForm } from "@/components/GeneratorForm";
 import { UploadForm } from "@/components/UploadForm";
 import { cn } from "@/lib/utils";
 
-export function GenerateTabs({ isPremium }: { isPremium: boolean }) {
+export function GenerateTabs({
+  canRemoveWatermark,
+  coinBalance,
+}: {
+  canRemoveWatermark: boolean;
+  coinBalance: number | null;
+}) {
   const [tab, setTab] = useState<"generate" | "upload">("generate");
 
   return (
@@ -34,10 +40,10 @@ export function GenerateTabs({ isPremium }: { isPremium: boolean }) {
 
       {tab === "generate" ? (
         <Suspense fallback={null}>
-          <GeneratorForm isPremium={isPremium} />
+          <GeneratorForm canRemoveWatermark={canRemoveWatermark} coinBalance={coinBalance} />
         </Suspense>
       ) : (
-        <UploadForm isPremium={isPremium} />
+        <UploadForm canRemoveWatermark={canRemoveWatermark} coinBalance={coinBalance} />
       )}
     </div>
   );

@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { BuyCoinsButton } from "@/components/BuyCoinsButton";
+import { TIERS, isPaidTier } from "@/lib/coins";
 import type { Database } from "@/types/database";
+import type { SubscriptionTier } from "@/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -22,7 +25,9 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
-  const isPremium = profile?.role === "premium" || profile?.role === "admin";
+  const tier = (profile?.subscription_tier ?? "free") as SubscriptionTier;
+  const paid = isPaidTier(tier);
+  const tierConfig = TIERS[tier];
 
   async function handleSaveProfile() {
     setSaving(true);
@@ -132,23 +137,28 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
       </Card>
 
       <Card className="p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-lg font-semibold">Subscription</h2>
             <div className="mt-1 flex items-center gap-2">
-              <Badge>{isPremium ? "Premium" : "Free"}</Badge>
-              <span className="text-xs text-ink-500">{profile?.subscription_status}</span>
+              <Badge>{tierConfig.label}</Badge>
+              <span className="text-xs text-ink-500">
+                {paid ? `${profile?.coin_balance ?? 0} coins available` : profile?.subscription_status}
+              </span>
             </div>
           </div>
-          {isPremium ? (
-            <Button variant="outline" onClick={handleManageBilling} disabled={portalLoading}>
-              {portalLoading ? "Opening…" : "Manage billing"}
-            </Button>
-          ) : (
-            <a href="/pricing">
-              <Button>Upgrade</Button>
-            </a>
-          )}
+          <div className="flex gap-2">
+            {paid && tierConfig.canBuyTopUp && <BuyCoinsButton />}
+            {paid ? (
+              <Button variant="outline" onClick={handleManageBilling} disabled={portalLoading}>
+                {portalLoading ? "Opening…" : "Manage billing"}
+              </Button>
+            ) : (
+              <a href="/pricing">
+                <Button>Upgrade</Button>
+              </a>
+            )}
+          </div>
         </div>
       </Card>
 

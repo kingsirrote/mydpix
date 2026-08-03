@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Sparkles, Download, RefreshCw, Lock, BookmarkPlus } from "lucide-react";
+import { Sparkles, Download, RefreshCw, Lock, BookmarkPlus, Coins } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ShareButton, StickerButton } from "@/components/ShareButtons";
@@ -21,10 +21,10 @@ const STYLES = [
 ] as const;
 
 const RATIOS = [
-  { value: "1:1", label: "Square" },
-  { value: "4:5", label: "Portrait" },
-  { value: "16:9", label: "Widescreen" },
-  { value: "9:16", label: "Story" },
+  { value: "1:1", label: "Square", coins: 1 },
+  { value: "4:5", label: "Portrait", coins: 2 },
+  { value: "16:9", label: "Widescreen", coins: 2 },
+  { value: "9:16", label: "Story", coins: 2 },
 ] as const;
 
 interface GeneratedMeme {
@@ -33,7 +33,13 @@ interface GeneratedMeme {
   thumbnail_url: string | null;
 }
 
-export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
+export function GeneratorForm({
+  canRemoveWatermark,
+  coinBalance,
+}: {
+  canRemoveWatermark: boolean;
+  coinBalance: number | null;
+}) {
   const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState(searchParams.get("prompt") ?? "");
   const [style, setStyle] = useState<string | null>(searchParams.get("style"));
@@ -42,6 +48,7 @@ export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<GeneratedMeme[]>([]);
   const [savingPrompt, setSavingPrompt] = useState(false);
+  const [coins, setCoins] = useState(coinBalance);
 
   // Re-sync if the search params change after mount (e.g. clicking another
   // "Use this prompt" link while already on /generate).
@@ -94,6 +101,7 @@ export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
         return;
       }
       setResults(data.memes);
+      if (typeof data.coinsRemaining === "number") setCoins(data.coinsRemaining);
       toast.success("Your memes are ready!");
     } catch {
       toast.error("Network error — please try again.");
@@ -121,9 +129,17 @@ export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
     URL.revokeObjectURL(url);
   }
 
+  const selectedRatio = RATIOS.find((r) => r.value === aspectRatio)!;
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-base-700 bg-base-900 p-4 sm:p-6">
+        {coins !== null && (
+          <div className="mb-4 flex items-center gap-1.5 text-sm text-signal">
+            <Coins className="h-4 w-4" /> {coins} coin{coins === 1 ? "" : "s"} available
+          </div>
+        )}
+
         <Textarea
           rows={3}
           placeholder='Describe the situation… e.g. "My salary disappeared the same day rent was due"'
@@ -161,6 +177,11 @@ export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
                 )}
               >
                 {r.label}
+                {coinBalance !== null && (
+                  <span className="ml-1 text-ink-500">
+                    ({r.coins} coin{r.coins === 1 ? "" : "s"}/img)
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -169,19 +190,19 @@ export function GeneratorForm({ isPremium }: { isPremium: boolean }) {
             <input
               type="checkbox"
               checked={removeWatermark}
-              disabled={!isPremium}
+              disabled={!canRemoveWatermark}
               onChange={(e) => setRemoveWatermark(e.target.checked)}
               className="h-4 w-4 rounded border-base-700 bg-base-900 accent-signal"
             />
             Remove watermark
-            {!isPremium && <Lock className="h-3 w-3 text-ink-500" />}
+            {!canRemoveWatermark && <Lock className="h-3 w-3 text-ink-500" />}
           </label>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
           <Button onClick={handleGenerate} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {loading ? "Generating…" : "Generate memes"}
+            {loading ? "Generating…" : `Generate memes${coinBalance !== null ? ` (up to ${selectedRatio.coins * 4} coins)` : ""}`}
           </Button>
           <Button variant="outline" onClick={handleSavePrompt} disabled={savingPrompt || prompt.trim().length < 3}>
             <BookmarkPlus className="h-4 w-4" /> {savingPrompt ? "Saving…" : "Save prompt"}

@@ -4,6 +4,7 @@
 
 export type UserRole = "user" | "premium" | "admin";
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "none";
+export type SubscriptionTier = "free" | "tier1" | "tier2" | "tier3";
 export type MemeSource = "ai_generated" | "uploaded" | "imported";
 export type ModerationStatus = "pending" | "approved" | "rejected" | "flagged";
 
@@ -18,6 +19,9 @@ export interface Database {
           avatar_url: string | null;
           role: UserRole;
           subscription_status: SubscriptionStatus;
+          subscription_tier: SubscriptionTier;
+          coin_balance: number;
+          coin_refresh_at: string;
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           generation_count_today: number;
@@ -140,6 +144,24 @@ export interface Database {
         Row: { key: string; value: unknown; updated_at: string };
         Insert: { key: string; value: unknown; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["site_settings"]["Row"]>;
+      };
+      coin_transactions: {
+        Row: {
+          id: string;
+          user_id: string;
+          amount: number;
+          reason: string;
+          meme_id: string | null;
+          balance_after: number;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["coin_transactions"]["Row"]> & {
+          user_id: string;
+          amount: number;
+          reason: string;
+          balance_after: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["coin_transactions"]["Row"]>;
       };
     };
   };

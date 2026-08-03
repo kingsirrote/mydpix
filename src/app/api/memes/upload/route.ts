@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { applyWatermark, generateThumbnail } from "@/lib/watermark";
+import { TIERS, FREE_DAILY_GENERATION_LIMIT, getCoinCosts, isPaidTier } from "@/lib/coins";
+import type { SubscriptionTier } from "@/types/database";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,21 +40,51 @@ export async function POST(request: NextRequest) {
   const title = (formData?.get("title") as string | null)?.slice(0, 80) || file.name.slice(0, 80);
   const removeWatermark = formData?.get("removeWatermark") === "true";
 
+  const service = createServiceClient();
+  const { data: profile } = await service.from("profiles").select("*").eq("id", user.id).single();
+
+  if (!profile) {
+    return NextResponse.json({ error: "Profile not found." }, { status: 404 });
+  }
+
+  const tier = profile.subscription_tier as SubscriptionTier;
+  const tierConfig = TIERS[tier];
+  const paid = isPaidTier(tier);
+  const costs = await getCoinCosts();
+  const now = new Date();
+
+  if (paid) {
+    if (profile.coin_balance < costs.upload) {
+      return NextResponse.json(
+        {
+          error: tierConfig.canBuyTopUp
+            ? `You need ${costs.upload} coin${costs.upload > 1 ? "s" : ""} to upload — buy a top-up or wait for your monthly refresh.`
+            : "You're out of coins for this month.",
+          coinsExhausted: true,
+        },
+        { status: 429 }
+      );
+    }
+  } else {
+    const resetAt = new Date(profile.generation_count_reset_at);
+    const needsReset =
+      now.getUTCDate() !== resetAt.getUTCDate() || now.getTime() - resetAt.getTime() > 24 * 60 * 60 * 1000;
+    const currentCount = needsReset ? 0 : profile.generation_count_today;
+    if (currentCount >= FREE_DAILY_GENERATION_LIMIT) {
+      return NextResponse.json(
+        { error: "You've used today's free uploads/generations. Upgrade to a paid plan.", limitReached: true },
+        { status: 429 }
+      );
+    }
+  }
+
   try {
-    const supabaseUser = createClient();
-    const { data: profile } = await supabaseUser
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    const isPremium = profile?.role === "premium" || profile?.role === "admin";
-    const skipWatermark = removeWatermark && isPremium;
+    const skipWatermark = removeWatermark && tierConfig.removesWatermark;
 
     const originalBuffer = Buffer.from(await file.arrayBuffer());
     const finalImage = await applyWatermark(originalBuffer, { skip: skipWatermark });
     const thumbnail = await generateThumbnail(finalImage);
 
-    const service = createServiceClient();
     const fileId = nanoid(12);
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
 
@@ -96,7 +128,30 @@ export async function POST(request: NextRequest) {
 
     if (insertError) throw insertError;
 
-    return NextResponse.json({ meme });
+    let coinsRemaining: number | null = null;
+    if (paid) {
+      const { data: spendResult } = await service.rpc("spend_coins", {
+        p_user_id: user.id,
+        p_amount: costs.upload,
+        p_reason: "upload",
+        p_meme_id: meme.id,
+      });
+      coinsRemaining = spendResult?.[0]?.new_balance ?? profile.coin_balance - costs.upload;
+    } else {
+      const resetAt = new Date(profile.generation_count_reset_at);
+      const needsReset =
+        now.getUTCDate() !== resetAt.getUTCDate() || now.getTime() - resetAt.getTime() > 24 * 60 * 60 * 1000;
+      const currentCount = needsReset ? 0 : profile.generation_count_today;
+      await service
+        .from("profiles")
+        .update({
+          generation_count_today: needsReset ? 1 : currentCount + 1,
+          generation_count_reset_at: needsReset ? now.toISOString() : profile.generation_count_reset_at,
+        })
+        .eq("id", user.id);
+    }
+
+    return NextResponse.json({ meme, coinsRemaining });
   } catch (error) {
     console.error("Image upload failed:", error);
     return NextResponse.json({ error: "Could not process your image. Please try again." }, { status: 500 });
