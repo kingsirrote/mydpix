@@ -55,16 +55,19 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
     }
   }
 
-  async function handleManageBilling() {
+  async function handleCancelSubscription() {
+    if (!confirm("Cancel your subscription? You'll drop to the Free plan immediately.")) return;
     setPortalLoading(true);
-    const res = await fetch("/api/stripe/portal", { method: "POST" });
+    const res = await fetch("/api/paystack/cancel", { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
-      toast.error(data.error ?? "Could not open billing portal.");
+      toast.error(data.error ?? "Could not cancel subscription.");
       setPortalLoading(false);
       return;
     }
-    window.location.href = data.url;
+    toast.success("Subscription canceled — you're now on the Free plan.");
+    router.refresh();
+    setPortalLoading(false);
   }
 
   async function handleDeleteAccount() {
@@ -150,8 +153,8 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
           <div className="flex gap-2">
             {paid && tierConfig.canBuyTopUp && <BuyCoinsButton />}
             {paid ? (
-              <Button variant="outline" onClick={handleManageBilling} disabled={portalLoading}>
-                {portalLoading ? "Opening…" : "Manage billing"}
+              <Button variant="outline" onClick={handleCancelSubscription} disabled={portalLoading}>
+                {portalLoading ? "Canceling…" : "Cancel subscription"}
               </Button>
             ) : (
               <a href="/pricing">

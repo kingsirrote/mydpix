@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { disableSubscription } from "@/lib/paystack";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,18 +17,17 @@ export async function DELETE() {
 
   const service = createServiceClient();
 
-  // Cancel any active Stripe subscription first so billing doesn't continue
+  // Cancel any active Paystack subscription first so billing doesn't continue
   // after the account is gone.
   const { data: profile } = await service
     .from("profiles")
-    .select("stripe_subscription_id")
+    .select("paystack_subscription_code, paystack_email_token")
     .eq("id", user.id)
     .single();
 
-  if (profile?.stripe_subscription_id) {
+  if (profile?.paystack_subscription_code && profile.paystack_email_token) {
     try {
-      const { stripe } = await import("@/lib/stripe");
-      await stripe.subscriptions.cancel(profile.stripe_subscription_id);
+      await disableSubscription(profile.paystack_subscription_code, profile.paystack_email_token);
     } catch (error) {
       console.error("Failed to cancel subscription during account deletion:", error);
       // Continue with deletion regardless — don't let a billing hiccup block

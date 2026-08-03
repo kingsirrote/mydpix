@@ -10,7 +10,7 @@ export function BuyCoinsButton() {
 
   async function handleClick() {
     setLoading(true);
-    const res = await fetch("/api/stripe/topup", { method: "POST" });
+    const res = await fetch("/api/paystack/topup", { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
       toast.error(data.error ?? "Could not start checkout.");

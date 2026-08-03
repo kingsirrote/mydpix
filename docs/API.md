@@ -85,20 +85,26 @@ Add or remove a meme from a collection. **Body:** `{ "memeId": "uuid" }`.
 
 ---
 
-### `POST /api/stripe/checkout`
+### `POST /api/paystack/checkout`
 
-Creates a Stripe Checkout session for a subscription plan.
+Creates a Paystack transaction for a subscription plan (tier1/tier2/tier3).
 
-**Body:** `{ "plan": "premium_monthly" | "premium_yearly" }`
-**Response:** `{ "url": "https://checkout.stripe.com/..." }`
+**Body:** `{ "plan": "tier1" | "tier2" | "tier3" }`
+**Response:** `{ "url": "https://checkout.paystack.com/..." }` — redirect the browser here.
 
-### `POST /api/stripe/portal`
+### `POST /api/paystack/topup`
 
-Creates a Stripe Billing Portal session for the signed-in user to manage their existing subscription.
+Creates a one-time Paystack transaction for a coin top-up pack. Requires an active paid-tier subscription.
 
-### `POST /api/stripe/webhook`
+**Response:** `{ "url": "https://checkout.paystack.com/..." }`
 
-Stripe webhook receiver. Verifies the `stripe-signature` header before processing. Keeps `profiles.role` / `profiles.subscription_status` in sync with Stripe subscription state.
+### `POST /api/paystack/cancel`
+
+Disables the signed-in user's active subscription and immediately drops them to the Free tier.
+
+### `POST /api/paystack/webhook`
+
+Paystack webhook receiver. Verifies the `x-paystack-signature` header (HMAC-SHA512) before processing. Handles `charge.success` (initial subscription charge or coin top-up), `subscription.create` (captures the subscription/email tokens needed to cancel later), `invoice.update` (renewal → refreshes monthly coins), `subscription.disable` / `subscription.not_renew`, and `invoice.payment_failed`.
 
 ---
 

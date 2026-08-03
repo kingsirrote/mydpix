@@ -21,7 +21,7 @@ export function PricingCard({ name, price, period, features, plan, highlight }: 
   async function handleUpgrade() {
     if (!plan) return;
     setLoading(true);
-    const res = await fetch("/api/stripe/checkout", {
+    const res = await fetch("/api/paystack/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),

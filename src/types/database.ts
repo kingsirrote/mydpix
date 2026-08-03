@@ -24,6 +24,9 @@ export interface Database {
           coin_refresh_at: string;
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
+          paystack_customer_code: string | null;
+          paystack_subscription_code: string | null;
+          paystack_email_token: string | null;
           generation_count_today: number;
           generation_count_reset_at: string;
           monthly_generation_count: number;

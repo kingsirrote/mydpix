@@ -10,7 +10,7 @@ MyDpix AI is a standard Next.js 14 app with a Supabase backend, so it deploys cl
 4. Set the build command to `next build` (default) — `output: "standalone"` in `next.config.mjs` is harmless on Vercel; it's used for the Docker path below.
 5. After the first deploy, update:
    - `NEXT_PUBLIC_APP_URL` to your real domain
-   - The Stripe webhook endpoint URL to `https://<your-domain>/api/stripe/webhook`
+   - The Paystack webhook URL to `https://<your-domain>/api/paystack/webhook`
    - The Supabase Auth redirect URL to `https://<your-domain>/api/auth/callback`
 6. Re-deploy so the updated env vars take effect.
 
@@ -57,7 +57,7 @@ npx supabase functions schedule create refresh-trending --cron "*/15 * * * *"
 - [ ] Env vars set in the hosting platform (not just `.env.local`)
 - [ ] Supabase migrations applied (`supabase db push`)
 - [ ] Supabase Auth redirect URLs point at the production domain
-- [ ] Stripe webhook endpoint + secret point at the production domain
+- [ ] Paystack webhook URL configured and pointing at the production domain
 - [ ] `refresh-trending` Edge Function deployed and scheduled
 - [ ] First admin user promoted (`update profiles set role = 'admin' where ...`)
 - [ ] CI green on `main` (`.github/workflows/ci.yml`)
