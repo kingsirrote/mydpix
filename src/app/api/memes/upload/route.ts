@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { applyWatermark, applyCustomWatermark, generateThumbnail } from "@/lib/watermark";
-import { TIERS, FREE_DAILY_GENERATION_LIMIT, getCoinCosts, isPaidTier } from "@/lib/coins";
+import { TIERS, FREE_DAILY_GENERATION_LIMIT, isPaidTier } from "@/lib/coins";
+import { getCoinCosts } from "@/lib/coins.server";
 import type { SubscriptionTier, MediaType } from "@/types/database";
 
 export const runtime = "nodejs";

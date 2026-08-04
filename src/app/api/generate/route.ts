@@ -7,7 +7,8 @@ import { moderatePrompt } from "@/lib/ai/moderation";
 import { buildImagePrompt, suggestStyle, type MemeStyle, type AspectRatio } from "@/lib/ai/promptEngine";
 import { generateImageVariations } from "@/lib/ai/openai";
 import { applyWatermark, applyCustomWatermark, generateThumbnail } from "@/lib/watermark";
-import { TIERS, FREE_DAILY_GENERATION_LIMIT, getCoinCosts, costForAspectRatio, isPaidTier } from "@/lib/coins";
+import { TIERS, FREE_DAILY_GENERATION_LIMIT, costForAspectRatio, isPaidTier } from "@/lib/coins";
+import { getCoinCosts } from "@/lib/coins.server";
 import type { SubscriptionTier } from "@/types/database";
 
 export const runtime = "nodejs";
