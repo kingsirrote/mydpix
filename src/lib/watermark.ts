@@ -4,7 +4,7 @@ const DEFAULT_WATERMARK_TEXT = "Generated with MyDpix AI  ·  www.mydpix.com";
 
 export interface WatermarkOptions {
   text?: string;
-  /** Skip entirely for premium users who've paid to remove it. */
+  /** Skip entirely for users who've paid to remove it. */
   skip?: boolean;
 }
 
@@ -90,6 +90,41 @@ export async function generateThumbnail(imageBuffer: Buffer, maxWidth = 480): Pr
 export async function toFormat(imageBuffer: Buffer, format: "png" | "jpg"): Promise<Buffer> {
   const image = sharp(imageBuffer);
   return format === "jpg" ? image.jpeg({ quality: 92 }).toBuffer() : image.png().toBuffer();
+}
+
+/**
+ * Composites a Tier 3 user's own uploaded watermark image in the bottom-right
+ * corner, scaled to a sensible max size (~22% of canvas width) so a
+ * user-uploaded logo can't dominate the meme. Used in place of the default
+ * text badge whenever the user has one configured and hasn't opted to remove
+ * watermarking entirely.
+ */
+export async function applyCustomWatermark(imageBuffer: Buffer, watermarkBuffer: Buffer): Promise<Buffer> {
+  const image = sharp(imageBuffer);
+  const metadata = await image.metadata();
+  const width = metadata.width ?? 1024;
+  const height = metadata.height ?? 1024;
+
+  const targetWidth = Math.round(width * 0.22);
+  const padding = Math.round(width * 0.02);
+
+  const resizedWatermark = await sharp(watermarkBuffer)
+    .resize({ width: targetWidth, withoutEnlargement: true })
+    .ensureAlpha()
+    .png()
+    .toBuffer();
+  const watermarkMeta = await sharp(resizedWatermark).metadata();
+  const watermarkHeight = watermarkMeta.height ?? targetWidth;
+
+  return image
+    .composite([
+      {
+        input: resizedWatermark,
+        top: Math.max(height - watermarkHeight - padding, 0),
+        left: Math.max(width - targetWidth - padding, 0),
+      },
+    ])
+    .toBuffer();
 }
 
 /**

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BuyCoinsButton } from "@/components/BuyCoinsButton";
+import { CustomWatermarkManager } from "@/components/CustomWatermarkManager";
 import { TIERS, isPaidTier } from "@/lib/coins";
 import type { Database } from "@/types/database";
 import type { SubscriptionTier } from "@/types/database";
@@ -164,6 +165,8 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
           </div>
         </div>
       </Card>
+
+      {tier === "tier3" && <CustomWatermarkManager currentWatermarkUrl={profile?.custom_watermark_url ?? null} />}
 
       <Card className="border-red-900/50 p-6">
         <h2 className="font-display text-lg font-semibold text-red-400">Danger zone</h2>

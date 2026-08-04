@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { moderatePrompt } from "@/lib/ai/moderation";
 import { buildImagePrompt, suggestStyle, type MemeStyle, type AspectRatio } from "@/lib/ai/promptEngine";
 import { generateImageVariations } from "@/lib/ai/openai";
-import { applyWatermark, generateThumbnail } from "@/lib/watermark";
+import { applyWatermark, applyCustomWatermark, generateThumbnail } from "@/lib/watermark";
 import { TIERS, FREE_DAILY_GENERATION_LIMIT, getCoinCosts, costForAspectRatio, isPaidTier } from "@/lib/coins";
 import type { SubscriptionTier } from "@/types/database";
 
@@ -169,8 +169,24 @@ async function handleGenerate(request: NextRequest) {
 
     const insertedMemes = [];
 
+    // Tier 3 custom watermark: fetch once, reuse across all variations in this
+    // request rather than re-fetching per image.
+    let customWatermarkBuffer: Buffer | null = null;
+    if (!skipWatermark && tier === "tier3" && profile.custom_watermark_url) {
+      try {
+        const wmResponse = await fetch(profile.custom_watermark_url);
+        if (wmResponse.ok) customWatermarkBuffer = Buffer.from(await wmResponse.arrayBuffer());
+      } catch (error) {
+        console.error("Failed to fetch custom watermark, falling back to default:", error);
+      }
+    }
+
     for (const result of results) {
-      const finalImage = await applyWatermark(result.buffer, { skip: skipWatermark });
+      const finalImage = skipWatermark
+        ? result.buffer
+        : customWatermarkBuffer
+          ? await applyCustomWatermark(result.buffer, customWatermarkBuffer)
+          : await applyWatermark(result.buffer);
       const thumbnail = await generateThumbnail(finalImage);
       const fileId = nanoid(12);
 

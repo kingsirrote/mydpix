@@ -6,7 +6,17 @@ import { Heart, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShareButton, StickerButton } from "@/components/ShareButtons";
 
-export function DetailActions({ memeId, imageUrl, title }: { memeId: string; imageUrl: string; title: string }) {
+export function DetailActions({
+  memeId,
+  imageUrl,
+  title,
+  mediaType = "image",
+}: {
+  memeId: string;
+  imageUrl: string;
+  title: string;
+  mediaType?: "image" | "video";
+}) {
   const [liked, setLiked] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -42,19 +52,34 @@ export function DetailActions({ memeId, imageUrl, title }: { memeId: string; ima
     URL.revokeObjectURL(url);
   }
 
+  async function downloadVideo() {
+    const a = document.createElement("a");
+    a.href = imageUrl;
+    a.download = `mydpix-${memeId.slice(0, 8)}.mp4`;
+    a.click();
+  }
+
   return (
     <div className="flex flex-wrap gap-3">
       <Button variant={liked ? "primary" : "outline"} onClick={toggleLike} disabled={busy}>
         <Heart className="h-4 w-4" /> {liked ? "Liked" : "Like"}
       </Button>
-      <Button variant="secondary" onClick={() => download("png")}>
-        <Download className="h-4 w-4" /> PNG
-      </Button>
-      <Button variant="secondary" onClick={() => download("jpg")}>
-        <Download className="h-4 w-4" /> JPG
-      </Button>
+      {mediaType === "video" ? (
+        <Button variant="secondary" onClick={downloadVideo}>
+          <Download className="h-4 w-4" /> Download
+        </Button>
+      ) : (
+        <>
+          <Button variant="secondary" onClick={() => download("png")}>
+            <Download className="h-4 w-4" /> PNG
+          </Button>
+          <Button variant="secondary" onClick={() => download("jpg")}>
+            <Download className="h-4 w-4" /> JPG
+          </Button>
+        </>
+      )}
       <ShareButton imageUrl={imageUrl} title={title} size="md" />
-      <StickerButton memeId={memeId} size="md" />
+      {mediaType !== "video" && <StickerButton memeId={memeId} size="md" />}
     </div>
   );
 }

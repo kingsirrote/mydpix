@@ -17,7 +17,7 @@ export default async function HomePage() {
   const supabase = createClient();
   const { data: featured } = await supabase
     .from("memes")
-    .select("id, title, image_url, thumbnail_url, aspect_ratio, view_count, like_count, download_count, is_featured")
+    .select("id, title, image_url, thumbnail_url, aspect_ratio, media_type, view_count, like_count, download_count, is_featured")
     .eq("is_public", true)
     .eq("moderation_status", "approved")
     .order("trending_score", { ascending: false })

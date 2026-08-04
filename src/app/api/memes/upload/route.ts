@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { applyWatermark, generateThumbnail } from "@/lib/watermark";
+import { applyWatermark, applyCustomWatermark, generateThumbnail } from "@/lib/watermark";
 import { TIERS, FREE_DAILY_GENERATION_LIMIT, getCoinCosts, isPaidTier } from "@/lib/coins";
-import type { SubscriptionTier } from "@/types/database";
+import type { SubscriptionTier, MediaType } from "@/types/database";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_IMAGE_SIZE = 8 * 1024 * 1024; // 8MB
+const MAX_VIDEO_SIZE = 20 * 1024 * 1024; // 20MB — keeps this feasible for "short" clips
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Sign in to upload images." }, { status: 401 });
+    return NextResponse.json({ error: "Sign in to upload." }, { status: 401 });
   }
 
   const formData = await request.formData().catch(() => null);
@@ -29,12 +31,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No file provided." }, { status: 400 });
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "Only PNG, JPG, and WebP images are supported." }, { status: 400 });
+  const isVideo = VIDEO_TYPES.includes(file.type);
+  const isImage = IMAGE_TYPES.includes(file.type);
+
+  if (!isVideo && !isImage) {
+    return NextResponse.json(
+      { error: "Only PNG, JPG, WebP images or MP4/WebM/MOV videos are supported." },
+      { status: 400 }
+    );
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: "Image is too large — 8MB max." }, { status: 400 });
+  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+  if (file.size > maxSize) {
+    return NextResponse.json(
+      { error: `File is too large — ${Math.round(maxSize / (1024 * 1024))}MB max${isVideo ? " (keep video memes short)" : ""}.` },
+      { status: 400 }
+    );
   }
 
   const title = (formData?.get("title") as string | null)?.slice(0, 80) || file.name.slice(0, 80);
@@ -80,34 +92,56 @@ export async function POST(request: NextRequest) {
 
   try {
     const skipWatermark = removeWatermark && tierConfig.removesWatermark;
-
     const originalBuffer = Buffer.from(await file.arrayBuffer());
-    const finalImage = await applyWatermark(originalBuffer, { skip: skipWatermark });
-    const thumbnail = await generateThumbnail(finalImage);
-
     const fileId = nanoid(12);
-    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const mediaType: MediaType = isVideo ? "video" : "image";
+
+    let finalBuffer: Buffer;
+    let thumbnailUrl: string | null = null;
+    let contentType = file.type;
+    let ext: string;
+
+    if (isVideo) {
+      // Video memes are not watermarked server-side in this version — burning
+      // a mark into video pixels needs ffmpeg-class tooling that's risky to
+      // run reliably inside Vercel's serverless time/storage limits. The
+      // MyDpix badge is shown as a player overlay in the UI instead; the
+      // downloaded/shared file itself is the original video, unmodified.
+      finalBuffer = originalBuffer;
+      ext = file.type === "video/webm" ? "webm" : file.type === "video/quicktime" ? "mov" : "mp4";
+    } else {
+      finalBuffer =
+        skipWatermark
+          ? originalBuffer
+          : tier === "tier3" && profile.custom_watermark_url
+            ? await applyCustomWatermark(
+                originalBuffer,
+                await fetch(profile.custom_watermark_url).then((r) => r.arrayBuffer()).then(Buffer.from)
+              )
+            : await applyWatermark(originalBuffer);
+
+      const thumbnail = await generateThumbnail(finalBuffer);
+      const { error: thumbError } = await service.storage
+        .from("memes")
+        .upload(`uploaded/${user.id}/${fileId}-thumb.webp`, thumbnail, {
+          contentType: "image/webp",
+          upsert: false,
+        });
+      if (thumbError) throw thumbError;
+      const { data: thumbUrlData } = service.storage
+        .from("memes")
+        .getPublicUrl(`uploaded/${user.id}/${fileId}-thumb.webp`);
+      thumbnailUrl = thumbUrlData.publicUrl;
+      ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+      contentType = file.type;
+    }
 
     const { error: uploadError } = await service.storage
       .from("memes")
-      .upload(`uploaded/${user.id}/${fileId}.${ext}`, finalImage, {
-        contentType: file.type,
-        upsert: false,
-      });
+      .upload(`uploaded/${user.id}/${fileId}.${ext}`, finalBuffer, { contentType, upsert: false });
     if (uploadError) throw uploadError;
 
-    const { error: thumbError } = await service.storage
-      .from("memes")
-      .upload(`uploaded/${user.id}/${fileId}-thumb.webp`, thumbnail, {
-        contentType: "image/webp",
-        upsert: false,
-      });
-    if (thumbError) throw thumbError;
-
     const { data: publicUrl } = service.storage.from("memes").getPublicUrl(`uploaded/${user.id}/${fileId}.${ext}`);
-    const { data: thumbUrl } = service.storage
-      .from("memes")
-      .getPublicUrl(`uploaded/${user.id}/${fileId}-thumb.webp`);
 
     const { data: meme, error: insertError } = await service
       .from("memes")
@@ -115,9 +149,10 @@ export async function POST(request: NextRequest) {
         owner_id: user.id,
         title,
         source: "uploaded",
+        media_type: mediaType,
         image_url: publicUrl.publicUrl,
-        thumbnail_url: thumbUrl.publicUrl,
-        watermarked: !skipWatermark,
+        thumbnail_url: thumbnailUrl,
+        watermarked: isVideo ? false : !skipWatermark,
         // Uploaded content hasn't passed AI moderation, so it stays private
         // to the uploader until an admin approves it for the public library.
         moderation_status: "pending",
@@ -153,7 +188,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ meme, coinsRemaining });
   } catch (error) {
-    console.error("Image upload failed:", error);
-    return NextResponse.json({ error: "Could not process your image. Please try again." }, { status: 500 });
+    console.error("Upload failed:", error);
+    return NextResponse.json({ error: "Could not process your upload. Please try again." }, { status: 500 });
   }
 }

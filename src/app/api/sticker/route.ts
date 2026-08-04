@@ -17,12 +17,16 @@ export async function POST(request: NextRequest) {
   const supabase = createClient();
   const { data: meme, error } = await supabase
     .from("memes")
-    .select("id, image_url, title")
+    .select("id, image_url, title, media_type")
     .eq("id", parsed.data.memeId)
     .single();
 
   if (error || !meme) {
     return NextResponse.json({ error: "Meme not found." }, { status: 404 });
+  }
+
+  if (meme.media_type === "video") {
+    return NextResponse.json({ error: "Stickers are image-only — video memes can't be converted." }, { status: 400 });
   }
 
   const imageResponse = await fetch(meme.image_url);

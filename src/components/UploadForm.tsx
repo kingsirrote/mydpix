@@ -13,6 +13,7 @@ interface UploadedMeme {
   image_url: string;
   thumbnail_url: string | null;
   title: string;
+  media_type: "image" | "video";
 }
 
 export function UploadForm({
@@ -24,6 +25,7 @@ export function UploadForm({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isVideo, setIsVideo] = useState(false);
   const [title, setTitle] = useState("");
   const [removeWatermark, setRemoveWatermark] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -36,6 +38,7 @@ export function UploadForm({
     setUploaded(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(selected ? URL.createObjectURL(selected) : null);
+    setIsVideo(selected?.type.startsWith("video/") ?? false);
   }
 
   function clearFile() {
@@ -45,7 +48,7 @@ export function UploadForm({
 
   async function handleUpload() {
     if (!file) {
-      toast.error("Choose an image first.");
+      toast.error("Choose a file first.");
       return;
     }
     setUploading(true);
@@ -83,11 +86,12 @@ export function UploadForm({
         {!previewUrl ? (
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-base-700 py-12 text-ink-500 hover:border-signal hover:text-signal">
             <Upload className="h-6 w-6" />
-            <span className="text-sm">Click to choose an image (PNG, JPG, WebP — max 8MB)</span>
+            <span className="text-sm">Click to choose an image or short video</span>
+            <span className="text-xs text-ink-500">PNG/JPG/WebP (8MB) · MP4/WebM/MOV (20MB, keep it short)</span>
             <input
               ref={inputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime"
               className="hidden"
               onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
             />
@@ -100,8 +104,12 @@ export function UploadForm({
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="relative mx-auto aspect-square w-full max-w-xs overflow-hidden rounded-xl">
-              <Image src={previewUrl} alt="Preview" fill className="object-contain" unoptimized />
+            <div className="relative mx-auto aspect-square w-full max-w-xs overflow-hidden rounded-xl bg-base-950">
+              {isVideo ? (
+                <video src={previewUrl} className="h-full w-full object-contain" controls muted playsInline />
+              ) : (
+                <Image src={previewUrl} alt="Preview" fill className="object-contain" unoptimized />
+              )}
             </div>
           </div>
         )}
@@ -116,33 +124,43 @@ export function UploadForm({
             <input
               type="checkbox"
               checked={removeWatermark}
-              disabled={!canRemoveWatermark}
+              disabled={!canRemoveWatermark || isVideo}
               onChange={(e) => setRemoveWatermark(e.target.checked)}
               className="h-4 w-4 rounded border-base-700 bg-base-900 accent-signal"
             />
             Remove watermark
-            {!canRemoveWatermark && <Lock className="h-3 w-3 text-ink-500" />}
+            {!canRemoveWatermark && !isVideo && <Lock className="h-3 w-3 text-ink-500" />}
           </label>
+          {isVideo && (
+            <p className="text-xs text-ink-500">
+              Video memes show the MyDpix badge as an on-page overlay only — it isn&apos;t baked into the downloaded
+              file the way image watermarks are.
+            </p>
+          )}
         </div>
 
         <Button className="mt-5 w-full sm:w-auto" onClick={handleUpload} disabled={!file || uploading}>
-          {uploading ? "Uploading…" : "Upload image"}
+          {uploading ? "Uploading…" : `Upload ${isVideo ? "video" : "image"}`}
         </Button>
 
         <p className="mt-3 text-xs text-ink-500">
-          Uploaded images are private to you until an admin approves them for the public library — you can still
-          download, share, and use them right away.
+          Uploads are private to you until an admin approves them for the public library — you can still download,
+          share, and use them right away.
         </p>
       </div>
 
       {uploaded && (
         <div className="overflow-hidden rounded-2xl border border-base-700">
-          <div className="relative aspect-square w-full">
-            <Image src={uploaded.image_url} alt={uploaded.title} fill className="object-cover" />
+          <div className="relative aspect-square w-full bg-base-950">
+            {uploaded.media_type === "video" ? (
+              <video src={uploaded.image_url} className="h-full w-full object-contain" controls muted playsInline />
+            ) : (
+              <Image src={uploaded.image_url} alt={uploaded.title} fill className="object-cover" />
+            )}
           </div>
           <div className="flex flex-wrap justify-center gap-1.5 border-t border-base-700 bg-base-900 p-2">
             <ShareButton imageUrl={uploaded.image_url} title={uploaded.title} />
-            <StickerButton memeId={uploaded.id} />
+            {uploaded.media_type !== "video" && <StickerButton memeId={uploaded.id} />}
           </div>
         </div>
       )}

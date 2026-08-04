@@ -14,7 +14,7 @@ export default async function MemeDetailPage({ params }: { params: { id: string 
 
   const { data: related } = await supabase
     .from("memes")
-    .select("id, title, image_url, thumbnail_url, aspect_ratio, view_count, like_count, download_count")
+    .select("id, title, image_url, thumbnail_url, aspect_ratio, media_type, view_count, like_count, download_count")
     .eq("category_id", meme.category_id ?? "")
     .neq("id", meme.id)
     .limit(4);
@@ -25,7 +25,24 @@ export default async function MemeDetailPage({ params }: { params: { id: string 
       <main className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr,0.8fr] lg:px-8">
         <div className="overflow-hidden rounded-2xl border border-base-700 bg-base-900">
           <div className="relative aspect-square w-full">
-            <Image src={meme.image_url} alt={meme.title} fill className="object-contain" priority />
+            {meme.media_type === "video" ? (
+              <>
+                <video
+                  src={meme.image_url}
+                  className="h-full w-full object-contain"
+                  controls
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+                <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-medium text-white/80">
+                  mydpix.ai
+                </span>
+              </>
+            ) : (
+              <Image src={meme.image_url} alt={meme.title} fill className="object-contain" priority />
+            )}
           </div>
         </div>
 
@@ -40,7 +57,12 @@ export default async function MemeDetailPage({ params }: { params: { id: string 
           </div>
 
           <div className="mt-6">
-            <DetailActions memeId={meme.id} imageUrl={meme.image_url} title={meme.title} />
+            <DetailActions
+              memeId={meme.id}
+              imageUrl={meme.image_url}
+              title={meme.title}
+              mediaType={meme.media_type}
+            />
           </div>
         </div>
       </main>

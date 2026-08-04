@@ -24,12 +24,19 @@ export async function POST(request: NextRequest) {
 
   const { data: meme, error } = await supabase
     .from("memes")
-    .select("id, image_url, title")
+    .select("id, image_url, title, media_type")
     .eq("id", parsed.data.memeId)
     .single();
 
   if (error || !meme) {
     return NextResponse.json({ error: "Meme not found." }, { status: 404 });
+  }
+
+  if (meme.media_type === "video") {
+    return NextResponse.json(
+      { error: "Video memes download as-is — use the direct download link instead of PNG/JPG conversion." },
+      { status: 400 }
+    );
   }
 
   const imageResponse = await fetch(meme.image_url);

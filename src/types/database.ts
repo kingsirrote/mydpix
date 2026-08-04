@@ -2,6 +2,7 @@
 // Regenerate with `npm run db:types` once the project is linked to a live
 // Supabase project — this file is a safe, accurate starting point either way.
 
+export type MediaType = "image" | "video";
 export type UserRole = "user" | "premium" | "admin";
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "none";
 export type SubscriptionTier = "free" | "tier1" | "tier2" | "tier3";
@@ -27,6 +28,7 @@ export interface Database {
           paystack_customer_code: string | null;
           paystack_subscription_code: string | null;
           paystack_email_token: string | null;
+          custom_watermark_url: string | null;
           generation_count_today: number;
           generation_count_reset_at: string;
           monthly_generation_count: number;
@@ -64,6 +66,7 @@ export interface Database {
           optimized_prompt: string | null;
           style: string | null;
           aspect_ratio: string;
+          media_type: MediaType;
           source: MemeSource;
           image_url: string;
           thumbnail_url: string | null;

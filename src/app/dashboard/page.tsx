@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const { data: profile } = await createServiceClient().from("profiles").select("*").eq("id", user.id).single();
   const { data: recentMemes } = await supabase
     .from("memes")
-    .select("id, title, image_url, thumbnail_url, aspect_ratio, view_count, like_count, download_count")
+    .select("id, title, image_url, thumbnail_url, aspect_ratio, media_type, view_count, like_count, download_count")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(12);
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
 
   const { data: likedRows } = await supabase
     .from("likes")
-    .select("memes(id, title, image_url, thumbnail_url, aspect_ratio, view_count, like_count, download_count)")
+    .select("memes(id, title, image_url, thumbnail_url, aspect_ratio, media_type, view_count, like_count, download_count)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(12);

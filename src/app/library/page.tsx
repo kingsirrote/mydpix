@@ -26,7 +26,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
   } else {
     let query = supabase
       .from("memes")
-      .select("id, title, image_url, thumbnail_url, aspect_ratio, view_count, like_count, download_count, is_featured")
+      .select("id, title, image_url, thumbnail_url, aspect_ratio, media_type, view_count, like_count, download_count, is_featured")
       .eq("is_public", true)
       .eq("moderation_status", "approved");
     if (searchParams.category) query = query.eq("category_id", searchParams.category);

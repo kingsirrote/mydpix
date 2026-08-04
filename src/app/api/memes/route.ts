@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("memes")
     .select(
-      "id, title, image_url, thumbnail_url, aspect_ratio, style, view_count, like_count, download_count, is_featured, created_at, category_id",
+      "id, title, image_url, thumbnail_url, aspect_ratio, media_type, style, view_count, like_count, download_count, is_featured, created_at, category_id",
       { count: "exact" }
     )
     .eq("is_public", true)
