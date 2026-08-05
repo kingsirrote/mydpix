@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/UserMenu";
+import { MobileNav } from "@/components/MobileNav";
 
 export async function Navbar() {
   const supabase = createClient();
@@ -35,6 +36,7 @@ export async function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
+          <MobileNav />
           {user ? (
             <UserMenu
               displayName={profile?.display_name ?? profile?.username ?? "Account"}

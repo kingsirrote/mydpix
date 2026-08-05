@@ -3,18 +3,17 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { Github, Chrome, Apple, Twitter } from "lucide-react";
+import { Chrome, Apple, Twitter } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-type OAuthProvider = "google" | "apple" | "twitter" | "github";
+type OAuthProvider = "google" | "apple" | "twitter";
 
-const OAUTH_PROVIDERS: { provider: OAuthProvider; label: string; icon: typeof Github }[] = [
+const OAUTH_PROVIDERS: { provider: OAuthProvider; label: string; icon: typeof Chrome }[] = [
   { provider: "google", label: "Continue with Google", icon: Chrome },
   { provider: "apple", label: "Continue with Apple", icon: Apple },
   { provider: "twitter", label: "Continue with X", icon: Twitter },
-  { provider: "github", label: "Continue with GitHub", icon: Github },
 ];
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
