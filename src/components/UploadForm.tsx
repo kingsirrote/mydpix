@@ -27,6 +27,8 @@ export function UploadForm({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isVideo, setIsVideo] = useState(false);
   const [title, setTitle] = useState("");
+  const [topText, setTopText] = useState("");
+  const [bottomText, setBottomText] = useState("");
   const [removeWatermark, setRemoveWatermark] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState<UploadedMeme | null>(null);
@@ -43,6 +45,8 @@ export function UploadForm({
 
   function clearFile() {
     handleFileSelect(null);
+    setTopText("");
+    setBottomText("");
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -56,6 +60,8 @@ export function UploadForm({
     formData.append("file", file);
     if (title.trim()) formData.append("title", title.trim());
     formData.append("removeWatermark", String(removeWatermark));
+    if (!isVideo && topText.trim()) formData.append("topText", topText.trim());
+    if (!isVideo && bottomText.trim()) formData.append("bottomText", bottomText.trim());
 
     try {
       const res = await fetch("/api/memes/upload", { method: "POST", body: formData });
@@ -108,9 +114,39 @@ export function UploadForm({
               {isVideo ? (
                 <video src={previewUrl} className="h-full w-full object-contain" controls muted playsInline />
               ) : (
-                <Image src={previewUrl} alt="Preview" fill className="object-contain" unoptimized />
+                <>
+                  <Image src={previewUrl} alt="Preview" fill className="object-contain" unoptimized />
+                  {(topText || bottomText) && (
+                    <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 text-center">
+                      <p
+                        className="font-black uppercase text-white"
+                        style={{ WebkitTextStroke: "1.5px black", fontFamily: "Impact, sans-serif" }}
+                      >
+                        {topText}
+                      </p>
+                      <p
+                        className="font-black uppercase text-white"
+                        style={{ WebkitTextStroke: "1.5px black", fontFamily: "Impact, sans-serif" }}
+                      >
+                        {bottomText}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
+          </div>
+        )}
+
+        {!isVideo && previewUrl && (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <Input placeholder="Top text (optional)" value={topText} onChange={(e) => setTopText(e.target.value)} maxLength={100} />
+            <Input
+              placeholder="Bottom text (optional)"
+              value={bottomText}
+              onChange={(e) => setBottomText(e.target.value)}
+              maxLength={100}
+            />
           </div>
         )}
 
@@ -134,7 +170,8 @@ export function UploadForm({
           {isVideo && (
             <p className="text-xs text-ink-500">
               Video memes show the MyDpix badge as an on-page overlay only — it isn&apos;t baked into the downloaded
-              file the way image watermarks are.
+              file the way image watermarks are. Caption text also isn&apos;t supported for video yet, for the same
+              reason.
             </p>
           )}
         </div>

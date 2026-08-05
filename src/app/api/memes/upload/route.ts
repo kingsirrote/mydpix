@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { applyWatermark, applyCustomWatermark, generateThumbnail } from "@/lib/watermark";
+import { applyWatermark, applyCustomWatermark, applyMemeCaption, generateThumbnail } from "@/lib/watermark";
 import { TIERS, FREE_DAILY_GENERATION_LIMIT, isPaidTier } from "@/lib/coins";
 import { getCoinCosts } from "@/lib/coins.server";
 import type { SubscriptionTier, MediaType } from "@/types/database";
@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
 
   const title = (formData?.get("title") as string | null)?.slice(0, 80) || file.name.slice(0, 80);
   const removeWatermark = formData?.get("removeWatermark") === "true";
+  const topText = (formData?.get("topText") as string | null)?.trim().slice(0, 100) || undefined;
+  const bottomText = (formData?.get("bottomText") as string | null)?.trim().slice(0, 100) || undefined;
 
   const service = createServiceClient();
   const { data: profile } = await service.from("profiles").select("*").eq("id", user.id).single();
@@ -111,15 +113,18 @@ export async function POST(request: NextRequest) {
       finalBuffer = originalBuffer;
       ext = file.type === "video/webm" ? "webm" : file.type === "video/quicktime" ? "mov" : "mp4";
     } else {
+      const captioned =
+        topText || bottomText ? await applyMemeCaption(originalBuffer, { topText, bottomText }) : originalBuffer;
+
       finalBuffer =
         skipWatermark
-          ? originalBuffer
+          ? captioned
           : tier === "tier3" && profile.custom_watermark_url
             ? await applyCustomWatermark(
-                originalBuffer,
+                captioned,
                 await fetch(profile.custom_watermark_url).then((r) => r.arrayBuffer()).then(Buffer.from)
               )
-            : await applyWatermark(originalBuffer);
+            : await applyWatermark(captioned);
 
       const thumbnail = await generateThumbnail(finalBuffer);
       const { error: thumbError } = await service.storage

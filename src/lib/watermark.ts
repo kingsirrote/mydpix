@@ -93,6 +93,72 @@ export async function toFormat(imageBuffer: Buffer, format: "png" | "jpg"): Prom
 }
 
 /**
+ * Burns classic meme-format top/bottom captions into an uploaded image —
+ * bold white text with a black outline, matching the impact-font look people
+ * expect from a "real" meme. Either field can be omitted. Applied before
+ * watermarking so the watermark stays a small corner mark regardless of
+ * caption length.
+ */
+export async function applyMemeCaption(
+  imageBuffer: Buffer,
+  { topText, bottomText }: { topText?: string; bottomText?: string }
+): Promise<Buffer> {
+  if (!topText && !bottomText) return imageBuffer;
+
+  const image = sharp(imageBuffer);
+  const metadata = await image.metadata();
+  const width = metadata.width ?? 1024;
+  const height = metadata.height ?? 1024;
+
+  const fontSize = Math.round(width * 0.09);
+  const lineHeight = fontSize * 1.15;
+  const strokeWidth = Math.max(2, Math.round(fontSize * 0.06));
+  const margin = Math.round(height * 0.04);
+  const maxCharsPerLine = Math.max(8, Math.floor(width / (fontSize * 0.6)));
+
+  function renderLines(text: string, startY: number, anchorTop: boolean): string {
+    const lines = wrapText(text.toUpperCase(), maxCharsPerLine);
+    return lines
+      .map((line, i) => {
+        const y = anchorTop ? startY + i * lineHeight : startY + (i - (lines.length - 1)) * lineHeight;
+        return `<text x="${width / 2}" y="${y}" text-anchor="middle"
+          font-family="Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif"
+          font-size="${fontSize}" font-weight="900"
+          fill="white" stroke="black" stroke-width="${strokeWidth}" paint-order="stroke"
+        >${escapeXml(line)}</text>`;
+      })
+      .join("\n");
+  }
+
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      ${topText ? renderLines(topText, margin + fontSize, true) : ""}
+      ${bottomText ? renderLines(bottomText, height - margin, false) : ""}
+    </svg>
+  `;
+
+  return image.composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).toBuffer();
+}
+
+export function wrapText(text: string, maxCharsPerLine: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxCharsPerLine && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, 4); // cap runaway captions at 4 lines
+}
+
+/**
  * Composites a Tier 3 user's own uploaded watermark image in the bottom-right
  * corner, scaled to a sensible max size (~22% of canvas width) so a
  * user-uploaded logo can't dominate the meme. Used in place of the default
