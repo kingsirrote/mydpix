@@ -27,9 +27,11 @@ export default function PricingPage() {
             period="forever"
             features={[
               "3 free generations / day",
-              "Watermarked downloads",
-              "Full library access",
-              "Share to any app",
+              "Image and video uploads (same daily limit)",
+              "Default MyDpix watermark on downloads",
+              "Full library browsing and search",
+              "Share directly to any app",
+              "Sticker-format export (images)",
             ]}
           />
           <PricingCard
@@ -38,10 +40,14 @@ export default function PricingPage() {
             period="/ month"
             plan="tier1"
             features={[
-              `${TIERS.tier1.monthlyCoins} coins / month`,
-              "Watermark-free downloads",
-              "Square = 1 coin, portrait/wide = 2 coins",
-              "Buy extra coins anytime",
+              `${TIERS.tier1.monthlyCoins} coins / month, refreshed monthly`,
+              "1 coin per square image, 2 coins for portrait/widescreen",
+              "1 coin per image or video upload",
+              "Watermark-free image downloads",
+              "Buy extra coin top-ups anytime",
+              "Full library browsing and search",
+              "Share directly to any app",
+              "Sticker-format export (images)",
             ]}
           />
           <PricingCard
@@ -51,10 +57,15 @@ export default function PricingPage() {
             plan="tier2"
             highlight
             features={[
-              `${TIERS.tier2.monthlyCoins} coins / month`,
-              "Everything in Tier 1",
+              `${TIERS.tier2.monthlyCoins} coins / month, refreshed monthly`,
+              "1 coin per square image, 2 coins for portrait/widescreen",
+              "1 coin per image or video upload",
+              "Watermark-free image downloads",
               "Priority generation queue",
-              "Buy extra coins anytime",
+              "Buy extra coin top-ups anytime",
+              "Full library browsing and search",
+              "Share directly to any app",
+              "Sticker-format export (images)",
             ]}
           />
           <PricingCard
@@ -63,10 +74,16 @@ export default function PricingPage() {
             period="/ month"
             plan="tier3"
             features={[
-              `${TIERS.tier3.monthlyCoins} coins / month`,
-              "Everything in Tier 2",
-              "Highest monthly coin allowance",
-              "Buy extra coins anytime",
+              `${TIERS.tier3.monthlyCoins} coins / month, refreshed monthly`,
+              "1 coin per square image, 2 coins for portrait/widescreen",
+              "1 coin per image or video upload",
+              "Watermark-free image downloads",
+              "Priority generation queue",
+              "Upload your own custom watermark — replaces the MyDpix badge on everything you create",
+              "Buy extra coin top-ups anytime",
+              "Full library browsing and search",
+              "Share directly to any app",
+              "Sticker-format export (images)",
             ]}
           />
         </div>

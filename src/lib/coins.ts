@@ -43,7 +43,7 @@ export const TIERS: Record<SubscriptionTier, TierConfig> = {
   tier3: {
     label: "Tier 3",
     priceNaira: 10000,
-    monthlyCoins: 400,
+    monthlyCoins: 600,
     removesWatermark: true,
     priorityQueue: true,
     canBuyTopUp: true,
