@@ -22,9 +22,11 @@ export default async function DashboardPage() {
   if (!user) redirect("/login?redirectTo=/dashboard");
 
   const { data: profile } = await createServiceClient().from("profiles").select("*").eq("id", user.id).single();
-  const { data: recentMemes } = await supabase
+  const { data: recentMemes, count: totalMemesCount } = await supabase
     .from("memes")
-    .select("id, title, image_url, thumbnail_url, aspect_ratio, media_type, view_count, like_count, download_count")
+    .select("id, title, image_url, thumbnail_url, aspect_ratio, media_type, view_count, like_count, download_count", {
+      count: "exact",
+    })
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(12);
@@ -53,6 +55,9 @@ export default async function DashboardPage() {
   const tier = (profile?.subscription_tier ?? "free") as SubscriptionTier;
   const paid = isPaidTier(tier);
   const tierConfig = TIERS[tier];
+  const daysActive = profile?.created_at
+    ? Math.max(1, Math.ceil((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+    : 1;
 
   return (
     <div className="min-h-screen">
@@ -65,7 +70,7 @@ export default async function DashboardPage() {
               <Badge>{tierConfig.label}</Badge>
               <span className="text-xs text-ink-500">
                 {paid
-                  ? `${profile?.coin_balance ?? 0} coins available`
+                  ? `${profile?.coin_balance ?? 0} to play with`
                   : `${profile?.generation_count_today ?? 0}/${FREE_DAILY_GENERATION_LIMIT} generations today`}
               </span>
             </div>
@@ -77,6 +82,12 @@ export default async function DashboardPage() {
             {paid && tierConfig.canBuyTopUp && <BuyCoinsButton />}
             <Link href="/generate"><Button>New meme</Button></Link>
           </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-6 text-sm text-ink-300">
+          <span><span className="font-semibold text-ink-100">{totalMemesCount ?? 0}</span> memes created</span>
+          <span><span className="font-semibold text-ink-100">{likedMemes.length}</span> liked</span>
+          <span><span className="font-semibold text-ink-100">{daysActive}</span> day{daysActive === 1 ? "" : "s"} active</span>
         </div>
 
         <section className="mt-10">

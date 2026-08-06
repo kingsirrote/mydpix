@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { moderatePrompt } from "@/lib/ai/moderation";
 import { buildImagePrompt, suggestStyle, type MemeStyle, type AspectRatio } from "@/lib/ai/promptEngine";
 import { generateImageVariations } from "@/lib/ai/openai";
-import { applyWatermark, applyCustomWatermark, generateThumbnail } from "@/lib/watermark";
+import { applyWatermark, applyCustomWatermark, applyMemeCaption, generateThumbnail } from "@/lib/watermark";
 import { TIERS, FREE_DAILY_GENERATION_LIMIT, costForAspectRatio, isPaidTier } from "@/lib/coins";
 import { getCoinCosts } from "@/lib/coins.server";
 import type { SubscriptionTier } from "@/types/database";
@@ -30,6 +30,8 @@ const requestSchema = z.object({
   aspectRatio: z.enum(["1:1", "4:5", "16:9", "9:16"]).default("1:1"),
   variations: z.number().int().min(1).max(4).default(4),
   removeWatermark: z.boolean().optional().default(false),
+  topText: z.string().max(100).optional(),
+  bottomText: z.string().max(100).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -72,7 +74,7 @@ async function handleGenerate(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const { prompt, aspectRatio, variations, removeWatermark } = parsed.data;
+  const { prompt, aspectRatio, variations, removeWatermark, topText, bottomText } = parsed.data;
   const style: MemeStyle = parsed.data.style ?? suggestStyle(prompt);
 
   const service = createServiceClient();
@@ -183,11 +185,13 @@ async function handleGenerate(request: NextRequest) {
     }
 
     for (const result of results) {
+      const captioned =
+        topText || bottomText ? await applyMemeCaption(result.buffer, { topText, bottomText }) : result.buffer;
       const finalImage = skipWatermark
-        ? result.buffer
+        ? captioned
         : customWatermarkBuffer
-          ? await applyCustomWatermark(result.buffer, customWatermarkBuffer)
-          : await applyWatermark(result.buffer);
+          ? await applyCustomWatermark(captioned, customWatermarkBuffer)
+          : await applyWatermark(captioned);
       const thumbnail = await generateThumbnail(finalImage);
       const fileId = nanoid(12);
 

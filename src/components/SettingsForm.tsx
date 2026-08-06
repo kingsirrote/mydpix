@@ -147,7 +147,7 @@ export function SettingsForm({ profile, email }: { profile: Profile | null; emai
             <div className="mt-1 flex items-center gap-2">
               <Badge>{tierConfig.label}</Badge>
               <span className="text-xs text-ink-500">
-                {paid ? `${profile?.coin_balance ?? 0} coins available` : profile?.subscription_status}
+                {paid ? `${profile?.coin_balance ?? 0} to play with` : profile?.subscription_status}
               </span>
             </div>
           </div>

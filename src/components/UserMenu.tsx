@@ -3,16 +3,18 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, Settings, Shield, LogOut } from "lucide-react";
+import { ChevronDown, Image as ImageIcon, Settings, Shield, LogOut, Coins } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function UserMenu({
   displayName,
   isAdmin,
+  coinBalance,
 }: {
   displayName: string;
   isAdmin: boolean;
+  coinBalance: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -41,20 +43,25 @@ export function UserMenu({
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-xl border border-base-700 bg-base-900 px-3 py-2 text-sm hover:border-base-500"
+        className="flex items-center gap-2 rounded-xl border border-base-700 bg-base-900 px-3 py-2 text-sm hover:border-base-500"
       >
+        {coinBalance !== null && (
+          <span className="flex items-center gap-1 rounded-full bg-signal/10 px-2 py-0.5 text-xs font-medium text-signal">
+            <Coins className="h-3 w-3" /> {coinBalance}
+          </span>
+        )}
         <span className="max-w-[120px] truncate">{displayName}</span>
         <ChevronDown className={cn("h-3.5 w-3.5 text-ink-500 transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-base-700 bg-base-900 py-1 shadow-xl">
+        <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-xl border border-base-700 bg-base-900 py-1 shadow-xl">
           <Link
             href="/dashboard"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 px-4 py-2 text-sm text-ink-300 hover:bg-base-800 hover:text-ink-100"
           >
-            <LayoutDashboard className="h-4 w-4" /> Dashboard
+            <ImageIcon className="h-4 w-4" /> My Memes
           </Link>
           <Link
             href="/dashboard/settings"

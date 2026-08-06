@@ -1,17 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles, Search, ShieldCheck } from "lucide-react";
+import { Sparkles, Search, ShieldCheck } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Button } from "@/components/ui/button";
+import { HeroGenerateBox } from "@/components/HeroGenerateBox";
 import { createClient } from "@/lib/supabase/server";
 import { MemeGrid } from "@/components/MemeGrid";
-
-const EXAMPLE_PROMPTS = [
-  "My salary disappeared the same day rent was due",
-  "When the group chat plans a trip but nobody sends money",
-  "POV: NEPA takes light right when the movie gets good",
-  "Me pretending I understood the meeting agenda",
-];
 
 export default async function HomePage() {
   const supabase = createClient();
@@ -40,21 +33,8 @@ export default async function HomePage() {
             MyDpix AI turns any life situation into a shareable meme in seconds — trained on internet humor,
             reaction culture, and the jokes your group chat actually sends.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/generate">
-              <Button size="lg">Start generating <ArrowRight className="h-4 w-4" /></Button>
-            </Link>
-            <Link href="/library">
-              <Button size="lg" variant="outline">Browse the library</Button>
-            </Link>
-          </div>
-          <div className="mx-auto mt-10 flex max-w-2xl flex-wrap items-center justify-center gap-2">
-            {EXAMPLE_PROMPTS.map((p) => (
-              <span key={p} className="rounded-full border border-base-800 bg-base-900/60 px-3 py-1.5 text-xs text-ink-500">
-                &ldquo;{p}&rdquo;
-              </span>
-            ))}
-          </div>
+
+          <HeroGenerateBox />
         </div>
       </section>
 
@@ -63,7 +43,19 @@ export default async function HomePage() {
           <h2 className="font-display text-2xl font-bold">Trending right now</h2>
           <Link href="/library" className="text-sm text-signal hover:underline">See all →</Link>
         </div>
-        <MemeGrid memes={featured ?? []} emptyLabel="Generate the first meme to see it here." />
+        {featured && featured.length > 0 ? (
+          <MemeGrid memes={featured} />
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-base-700 py-16 text-center">
+            <p className="font-display text-lg font-semibold">The timeline&apos;s empty — for now.</p>
+            <p className="mt-2 max-w-sm text-sm text-ink-500">
+              Be the first to make something. Every meme that gets liked and shared earns its spot up here.
+            </p>
+            <Link href="/generate" className="mt-4 text-sm text-signal hover:underline">
+              Make the first one →
+            </Link>
+          </div>
+        )}
       </section>
 
       <section className="border-t border-base-800 bg-base-900/40 py-20">

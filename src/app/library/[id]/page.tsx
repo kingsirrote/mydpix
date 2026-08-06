@@ -1,9 +1,12 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Wand2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/server";
 import { DetailActions } from "@/components/DetailActions";
+import { Button } from "@/components/ui/button";
 import { formatCount } from "@/lib/utils";
 
 export default async function MemeDetailPage({ params }: { params: { id: string } }) {
@@ -55,6 +58,17 @@ export default async function MemeDetailPage({ params }: { params: { id: string 
             <span>{formatCount(meme.like_count)} likes</span>
             <span>{formatCount(meme.download_count)} downloads</span>
           </div>
+
+          {meme.prompt && (
+            <Link
+              href={`/generate?prompt=${encodeURIComponent(meme.prompt)}${meme.style ? `&style=${meme.style}` : ""}`}
+              className="mt-4 block"
+            >
+              <Button className="w-full sm:w-auto">
+                <Wand2 className="h-4 w-4" /> Use this meme →
+              </Button>
+            </Link>
+          )}
 
           <div className="mt-6">
             <DetailActions

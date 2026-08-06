@@ -85,7 +85,8 @@ export function UploadForm({
       <div className="rounded-2xl border border-base-700 bg-base-900 p-4 sm:p-6">
         {coins !== null && (
           <div className="mb-4 flex items-center gap-1.5 text-sm text-signal">
-            <Coins className="h-4 w-4" /> {coins} coin{coins === 1 ? "" : "s"} available
+            <Coins className="h-4 w-4 text-signal" />
+            <span className="text-ink-300">You&apos;ve got <span className="font-semibold text-signal">{coins}</span> to play with</span>
           </div>
         )}
 

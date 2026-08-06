@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Sparkles, Download, RefreshCw, Lock, BookmarkPlus, Coins } from "lucide-react";
+import { Sparkles, Download, RefreshCw, Lock, BookmarkPlus, Coins, Type } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ShareButton, StickerButton } from "@/components/ShareButtons";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,9 @@ export function GeneratorForm({
   const [style, setStyle] = useState<string | null>(searchParams.get("style"));
   const [aspectRatio, setAspectRatio] = useState<(typeof RATIOS)[number]["value"]>("1:1");
   const [removeWatermark, setRemoveWatermark] = useState(false);
+  const [showCaption, setShowCaption] = useState(false);
+  const [topText, setTopText] = useState("");
+  const [bottomText, setBottomText] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<GeneratedMeme[]>([]);
   const [savingPrompt, setSavingPrompt] = useState(false);
@@ -93,6 +97,8 @@ export function GeneratorForm({
           aspectRatio,
           variations: 4,
           removeWatermark,
+          topText: topText.trim() || undefined,
+          bottomText: bottomText.trim() || undefined,
         }),
       });
       const data = await response.json();
@@ -129,14 +135,13 @@ export function GeneratorForm({
     URL.revokeObjectURL(url);
   }
 
-  const selectedRatio = RATIOS.find((r) => r.value === aspectRatio)!;
-
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-base-700 bg-base-900 p-4 sm:p-6">
         {coins !== null && (
-          <div className="mb-4 flex items-center gap-1.5 text-sm text-signal">
-            <Coins className="h-4 w-4" /> {coins} coin{coins === 1 ? "" : "s"} available
+          <div className="mb-4 flex items-center gap-2 text-sm">
+            <Coins className="h-4 w-4 text-signal" />
+            <span className="text-ink-300">You&apos;ve got <span className="font-semibold text-signal">{coins}</span> to play with</span>
           </div>
         )}
 
@@ -177,11 +182,6 @@ export function GeneratorForm({
                 )}
               >
                 {r.label}
-                {coinBalance !== null && (
-                  <span className="ml-1 text-ink-500">
-                    ({r.coins} coin{r.coins === 1 ? "" : "s"}/img)
-                  </span>
-                )}
               </button>
             ))}
           </div>
@@ -199,10 +199,35 @@ export function GeneratorForm({
           </label>
         </div>
 
+        {coinBalance !== null && aspectRatio !== "1:1" && (
+          <p className="mt-2 text-xs text-ink-500">Portrait and widescreen use a little more than square.</p>
+        )}
+
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowCaption((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium text-ink-300 hover:text-signal"
+          >
+            <Type className="h-3.5 w-3.5" /> {showCaption ? "Hide caption text" : "Add caption text (optional)"}
+          </button>
+          {showCaption && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <Input placeholder="Top text" value={topText} onChange={(e) => setTopText(e.target.value)} maxLength={100} />
+              <Input
+                placeholder="Bottom text"
+                value={bottomText}
+                onChange={(e) => setBottomText(e.target.value)}
+                maxLength={100}
+              />
+            </div>
+          )}
+        </div>
+
         <div className="mt-5 flex flex-wrap gap-2">
           <Button onClick={handleGenerate} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {loading ? "Generating…" : `Generate memes${coinBalance !== null ? ` (up to ${selectedRatio.coins * 4} coins)` : ""}`}
+            {loading ? "Generating…" : "Generate meme"}
           </Button>
           <Button variant="outline" onClick={handleSavePrompt} disabled={savingPrompt || prompt.trim().length < 3}>
             <BookmarkPlus className="h-4 w-4" /> {savingPrompt ? "Saving…" : "Save prompt"}

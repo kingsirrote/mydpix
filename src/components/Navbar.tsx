@@ -3,6 +3,8 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/UserMenu";
 import { MobileNav } from "@/components/MobileNav";
+import { isPaidTier } from "@/lib/coins";
+import type { SubscriptionTier } from "@/types/database";
 
 export async function Navbar() {
   const supabase = createClient();
@@ -10,12 +12,18 @@ export async function Navbar() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let profile: { display_name: string | null; username: string; role: string } | null = null;
+  let profile: {
+    display_name: string | null;
+    username: string;
+    role: string;
+    subscription_tier: SubscriptionTier;
+    coin_balance: number;
+  } | null = null;
   if (user) {
     const service = createServiceClient();
     const { data } = await service
       .from("profiles")
-      .select("display_name, username, role")
+      .select("display_name, username, role, subscription_tier, coin_balance")
       .eq("id", user.id)
       .single();
     profile = data;
@@ -30,8 +38,8 @@ export async function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-6 text-sm text-ink-300 md:flex">
-          <Link href="/generate" className="hover:text-ink-100">Generate</Link>
-          <Link href="/library" className="hover:text-ink-100">Library</Link>
+          <Link href="/generate" className="hover:text-ink-100">Create</Link>
+          <Link href="/library" className="hover:text-ink-100">Explore</Link>
           <Link href="/pricing" className="hover:text-ink-100">Pricing</Link>
         </div>
 
@@ -41,6 +49,7 @@ export async function Navbar() {
             <UserMenu
               displayName={profile?.display_name ?? profile?.username ?? "Account"}
               isAdmin={profile?.role === "admin"}
+              coinBalance={profile && isPaidTier(profile.subscription_tier) ? profile.coin_balance : null}
             />
           ) : (
             <>
@@ -48,7 +57,7 @@ export async function Navbar() {
                 <Button size="sm" variant="ghost">Log in</Button>
               </Link>
               <Link href="/signup">
-                <Button size="sm">Sign up free</Button>
+                <Button size="sm">Create meme</Button>
               </Link>
             </>
           )}
